@@ -424,3 +424,64 @@ main {
     /* Switch to single column on mobile */
     .panels { grid-template-columns: 1fr; }
 }
+
+/* ─── CHANGES REPORT ─────────────────────────────────────────────────────────
+
+   Shows what patterns were detected and changed.
+   Appears below the humanized text in the output panel.
+*/
+.changes-report {
+    border-top: 1px solid var(--border);
+    padding: 1rem 1.25rem;
+    background: #fafbfc;
+}
+
+.changes-header {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.75rem;
+}
+
+.change-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.change-item:last-child {
+    border-bottom: none;
+}
+
+/* The pattern number badge (P7, P23, etc.) */
+.change-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--accent);
+    background: var(--accent-light);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    white-space: nowrap;
+    margin-top: 0.1rem;
+}
+
+.change-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.change-content strong {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+}
+
+.change-detail {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+}

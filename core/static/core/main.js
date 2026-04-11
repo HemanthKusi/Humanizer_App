@@ -1,29 +1,25 @@
 /*
     main.js
     -------
-    Handles all the interactive behaviour on the page.
+    Handles all interactive behaviour on the page.
 
-    Right now the humanize button uses a FAKE response to simulate
-    the real API call. In Step 4 we replace the fake response
-    with a real fetch() call to our Django backend.
+    NOW UPDATED: The humanize button calls our real Django backend
+    at /api/humanize/ which runs the rule-based pattern engine.
 
     Structure:
-    1. Get references to DOM elements
-    2. Update character count as user types
-    3. Handle the Humanize button click
-    4. Show loading state
-    5. Show result (fake for now)
-    6. Handle Copy button
-    7. Show toast notifications
+    1. DOM element references
+    2. Character counter
+    3. Humanize button click handler
+    4. humanizeText() — real API call to Django backend
+    5. UI state functions (loading, result, error)
+    6. Changes report display
+    7. Copy button
+    8. Toast notifications
 */
 
 
-/* ─── 1. DOM ELEMENT REFERENCES ─────────────────────────────────────────────
+/* ─── 1. DOM ELEMENT REFERENCES ──────────────────────────────────────────── */
 
-   We grab references to HTML elements once at the top.
-   This is faster than searching the DOM every time we need them.
-   document.getElementById() finds an element by its id="..." attribute.
-*/
 const inputText      = document.getElementById('input-text');
 const outputArea     = document.getElementById('output-area');
 const charCount      = document.getElementById('char-count');
@@ -32,124 +28,87 @@ const btnCopy        = document.getElementById('btn-copy');
 const toast          = document.getElementById('toast');
 
 
-/* ─── 2. CHARACTER COUNTER ───────────────────────────────────────────────────
+/* ─── 2. CHARACTER COUNTER ───────────────────────────────────────────────── */
 
-   Updates the character count display as the user types.
-   'input' event fires every time the textarea content changes.
-*/
 inputText.addEventListener('input', function() {
-    /*
-     * this.value is the current text in the textarea.
-     * .length gives the number of characters.
-     */
     const count = this.value.length;
     charCount.textContent = count.toLocaleString() + ' characters';
-
-    /*
-     * Disable the Humanize button if there is no text.
-     * This prevents the user from clicking it on an empty input.
-     */
     btnHumanize.disabled = count === 0;
 });
 
 
-/* ─── 3. HUMANIZE BUTTON CLICK ───────────────────────────────────────────────
+/* ─── 3. HUMANIZE BUTTON CLICK ───────────────────────────────────────────── */
 
-   This is the main function. When the user clicks Humanize:
-   1. Validate they typed something
-   2. Show the loading state
-   3. Call the humanize function (fake for now, real in Step 4)
-   4. Show the result
-*/
 btnHumanize.addEventListener('click', async function() {
-    /*
-     * Get the text the user typed.
-     * .trim() removes whitespace from the start and end.
-     */
     const text = inputText.value.trim();
-
-    /* Guard clause: do nothing if the input is empty */
     if (!text) return;
 
-    /* Show loading animation in the output panel */
     showLoading();
 
     try {
-        /*
-         * Call our humanize function.
-         * 'await' pauses here until the function finishes.
-         * In Step 4, this will be a real API call.
-         * Right now it returns a fake result after a delay.
-         */
         const result = await humanizeText(text);
-
-        /* Show the result in the output panel */
         showResult(result);
-
     } catch (error) {
-        /*
-         * If anything goes wrong, show an error message.
-         * console.error() logs the full error for debugging.
-         */
         console.error('Humanization failed:', error);
         showError(error.message);
     }
 });
 
 
-/* ─── 4. HUMANIZE FUNCTION (FAKE / PLACEHOLDER) ──────────────────────────────
+/* ─── 4. HUMANIZE FUNCTION — REAL API CALL ───────────────────────────────── 
 
-   This function simulates what the real API call will do.
-   It waits 2 seconds (like a real API would take) then returns
-   a hardcoded example result.
+   Sends the user's text to our Django backend at /api/humanize/
+   The backend runs the rule-based engine and returns JSON.
 
-   In Step 4 we replace the body of this function with:
-       const response = await fetch('/api/humanize/', {...})
-
-   Inputs:  text (string) - the AI-generated text to humanize
-   Outputs: Promise<string> - the humanized text (or throws an error)
+   Inputs:  text (string) — the AI-generated text to humanize
+   Outputs: Promise<object> — { text, changes, stats, mode }
+   Throws:  Error if the request fails or the server returns an error
 */
 async function humanizeText(text) {
     /*
-     * Simulate network delay so we can see the loading state.
-     * Promise + setTimeout is the standard way to fake async waits.
-     * 2000 = 2000 milliseconds = 2 seconds.
+     * fetch() sends an HTTP request to our Django backend.
+     *
+     * method: 'POST' — we're sending data to the server
+     * headers: tells the server we're sending JSON
+     * body: the actual data — our text wrapped in a JSON object
      */
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    const response = await fetch('/api/humanize/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: text }),
+    });
 
     /*
-     * Return a fake result for now.
-     * This is just a demonstration so you can see the UI working.
-     * The real result will come from GPT-4o mini via our Django backend.
+     * Parse the JSON response from the server.
+     * This gives us an object like:
+     * { text: "...", changes: [...], stats: {...}, mode: "rule-based" }
      */
-    return `This is a placeholder humanized version of your text.
+    const data = await response.json();
 
-In Step 4, this will be replaced with the actual GPT-4o mini response that rewrites your AI-generated text using the 29 humanizer patterns.
+    /*
+     * If the server returned an error (status 400 or 500),
+     * throw it so our catch block in the click handler catches it.
+     */
+    if (!response.ok) {
+        throw new Error(data.error || 'Something went wrong');
+    }
 
-Your original text was ${text.split(' ').length} words long.`;
+    return data;
 }
 
 
-/* ─── 5. UI STATE FUNCTIONS ──────────────────────────────────────────────────
-
-   These functions swap what is shown inside the output panel.
-   The output panel can show one of four states:
-   - Placeholder (default, before anything happens)
-   - Loading (while waiting for API)
-   - Result (after success)
-   - Error (if something went wrong)
-*/
+/* ─── 5. UI STATE FUNCTIONS ──────────────────────────────────────────────── */
 
 /**
- * Shows the three-dot loading animation in the output panel.
- * Called when the Humanize button is clicked.
+ * Shows the loading animation in the output panel.
  */
 function showLoading() {
-    /* Disable the button to prevent double-clicks */
     btnHumanize.disabled = true;
     btnHumanize.textContent = 'Humanizing...';
+    btnCopy.style.display = 'none';
 
-    /* Replace the output panel content with a loading animation */
     outputArea.innerHTML = `
         <div class="loading-state">
             <div class="loading-dots">
@@ -157,34 +116,54 @@ function showLoading() {
                 <span></span>
                 <span></span>
             </div>
-            <p>Rewriting your text...</p>
+            <p>Analyzing patterns...</p>
         </div>
     `;
 }
 
 /**
- * Shows the humanized result text in the output panel.
- * Called when the API call succeeds.
+ * Shows the humanized result text and the changes report.
  *
- * @param {string} text - The humanized text to display
+ * @param {object} result — { text, changes, stats, mode }
  */
-function showResult(text) {
-    /* Re-enable the button */
+function showResult(result) {
     btnHumanize.disabled = false;
     btnHumanize.innerHTML = '✦ Humanize';
 
-    /* Show the humanized text */
-    outputArea.innerHTML = `<div id="output-text">${escapeHtml(text)}</div>`;
+    /* Build the output HTML */
+    let html = `<div id="output-text">${escapeHtml(result.text)}</div>`;
 
-    /* Show the Copy button */
+    /* Add the stats bar */
+    html += `
+        <div class="stats-bar" style="display: flex;">
+            <div class="stat">
+                <span class="stat-label">Words</span>
+                <span class="stat-value">${result.stats.original_words} → ${result.stats.final_words}</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Patterns found</span>
+                <span class="stat-value">${result.stats.patterns_found}</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Mode</span>
+                <span class="stat-value">${result.mode}</span>
+            </div>
+        </div>
+    `;
+
+    /* Add the changes report if there are changes */
+    if (result.changes && result.changes.length > 0) {
+        html += buildChangesReport(result.changes);
+    }
+
+    outputArea.innerHTML = html;
     btnCopy.style.display = 'inline-flex';
 }
 
 /**
  * Shows an error message in the output panel.
- * Called when the API call fails.
  *
- * @param {string} message - The error message to show the user
+ * @param {string} message — The error message to display
  */
 function showError(message) {
     btnHumanize.disabled = false;
@@ -198,13 +177,43 @@ function showError(message) {
     `;
 }
 
+
+/* ─── 6. CHANGES REPORT ─────────────────────────────────────────────────── 
+
+   Builds an HTML list showing what patterns were detected and changed.
+   This helps the user understand what the engine did to their text.
+
+   @param {Array} changes — list of { pattern, name, detail } objects
+   @returns {string} — HTML string for the changes report
+*/
+function buildChangesReport(changes) {
+    let items = '';
+    for (const change of changes) {
+        items += `
+            <div class="change-item">
+                <span class="change-badge">P${change.pattern}</span>
+                <div class="change-content">
+                    <strong>${escapeHtml(change.name)}</strong>
+                    <span class="change-detail">${escapeHtml(change.detail)}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="changes-report">
+            <div class="changes-header">Changes made</div>
+            ${items}
+        </div>
+    `;
+}
+
+
 /**
- * Sanitizes text before inserting it into HTML.
- * Prevents XSS attacks where malicious text could inject HTML tags.
- * Always sanitize user input before putting it in the DOM.
+ * Sanitizes text before inserting into HTML to prevent XSS.
  *
- * @param {string} text - Raw text to sanitize
- * @returns {string} - Safe HTML string
+ * @param {string} text — Raw text to sanitize
+ * @returns {string} — Safe HTML string
  */
 function escapeHtml(text) {
     const div = document.createElement('div');
@@ -213,21 +222,13 @@ function escapeHtml(text) {
 }
 
 
-/* ─── 6. COPY BUTTON ─────────────────────────────────────────────────────────
+/* ─── 7. COPY BUTTON ─────────────────────────────────────────────────────── */
 
-   Copies the output text to the clipboard when the user clicks Copy.
-   Uses the modern Clipboard API.
-*/
 btnCopy.addEventListener('click', async function() {
-    /* Find the output text element */
     const outputText = document.getElementById('output-text');
     if (!outputText) return;
 
     try {
-        /*
-         * navigator.clipboard.writeText() copies to clipboard.
-         * It returns a Promise, so we await it.
-         */
         await navigator.clipboard.writeText(outputText.textContent);
         showToast('Copied to clipboard!');
     } catch (error) {
@@ -236,20 +237,11 @@ btnCopy.addEventListener('click', async function() {
 });
 
 
-/* ─── 7. TOAST NOTIFICATION ──────────────────────────────────────────────────
+/* ─── 8. TOAST NOTIFICATION ──────────────────────────────────────────────── */
 
-   Shows a small popup message at the bottom right of the screen.
-   Automatically hides after 2.5 seconds.
-
-   @param {string} message - The message to show in the toast
-*/
 function showToast(message) {
     toast.textContent = message;
-
-    /* Add the 'show' class to trigger the CSS transition (fade in) */
     toast.classList.add('show');
-
-    /* After 2.5 seconds, remove 'show' to fade out */
     setTimeout(() => {
         toast.classList.remove('show');
     }, 2500);
