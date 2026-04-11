@@ -1,0 +1,426 @@
+/*
+    style.css
+    ---------
+    All styles for the Humanizer app.
+
+    We use CSS custom properties (variables) at the top so that
+    changing one value updates the color/spacing everywhere.
+    This makes theming and future changes very easy.
+*/
+
+
+/* ─── CSS VARIABLES (Design Tokens) ─────────────────────────────────────────
+
+   These are like constants in Python. Define once, use everywhere.
+   Change --accent here and every button, badge, and highlight updates.
+*/
+:root {
+    --bg:           #f0f2f5;       /* page background */
+    --surface:      #ffffff;       /* card/panel background */
+    --border:       #e2e8f0;       /* border color */
+    --text-primary: #0f172a;       /* main text */
+    --text-muted:   #64748b;       /* secondary text */
+    --accent:       #6366f1;       /* indigo - our brand color */
+    --accent-hover: #4f46e5;       /* darker indigo on hover */
+    --accent-light: #eef2ff;       /* very light indigo for backgrounds */
+    --success:      #10b981;       /* green for success states */
+    --error:        #ef4444;       /* red for error states */
+    --radius:       12px;          /* standard border radius */
+    --shadow:       0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+}
+
+
+/* ─── RESET & BASE ───────────────────────────────────────────────────────────
+
+   Remove browser default styles so we start clean on all browsers.
+*/
+*, *::before, *::after {
+    box-sizing: border-box;  /* padding is included in width calculation */
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter',
+                 Roboto, sans-serif;
+    background-color: var(--bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    /* Makes the page a vertical flex container so header+main fill the viewport */
+    display: flex;
+    flex-direction: column;
+}
+
+
+/* ─── HEADER ─────────────────────────────────────────────────────────────────*/
+
+header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    height: 60px;
+    /* Horizontal flex: logo on left, nav on right */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    /* Header stays at the top even when page scrolls */
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+    text-decoration: none;
+}
+
+/* The coloured dot next to the logo text */
+.logo-dot {
+    width: 10px;
+    height: 10px;
+    background: var(--accent);
+    border-radius: 50%;
+    /* Subtle pulse animation to show the app is live */
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.6; transform: scale(1.2); }
+}
+
+.header-badge {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: var(--bg);
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+}
+
+
+/* ─── MAIN LAYOUT ────────────────────────────────────────────────────────────*/
+
+main {
+    flex: 1;              /* fills remaining vertical space */
+    padding: 2rem;
+    max-width: 1400px;
+    width: 100%;
+    margin: 0 auto;       /* centers the content horizontally */
+}
+
+/* Hero section above the panels */
+.hero {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.hero h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.02em;
+}
+
+/* The colored word in the heading */
+.hero h1 span {
+    color: var(--accent);
+}
+
+.hero p {
+    color: var(--text-muted);
+    font-size: 1rem;
+    max-width: 480px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+
+/* ─── TWO PANEL LAYOUT ───────────────────────────────────────────────────────
+
+   The main editor area is split into two panels side by side:
+   Left panel  = input (paste your AI text here)
+   Right panel = output (see the humanized result here)
+*/
+.panels {
+    display: grid;
+    /* Two equal columns with a gap between them */
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+/* Each panel is a white card */
+.panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    /* Smooth border color change when panel is active */
+    transition: border-color 0.2s;
+}
+
+.panel:focus-within {
+    border-color: var(--accent);
+}
+
+/* Top bar of each panel with the label and action buttons */
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.875rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    background: #fafafa;
+}
+
+.panel-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+/* Small action buttons inside panel headers (like Copy) */
+.panel-action {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.3rem 0.7rem;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.panel-action:hover {
+    background: var(--bg);
+    color: var(--text-primary);
+}
+
+/* The textarea where user pastes their text */
+#input-text {
+    width: 100%;
+    min-height: 360px;
+    padding: 1.25rem;
+    border: none;             /* panel border handles the border */
+    outline: none;            /* remove browser default focus ring */
+    resize: vertical;         /* user can drag to make it taller */
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: var(--text-primary);
+    font-family: inherit;
+    background: var(--surface);
+}
+
+#input-text::placeholder {
+    color: #a0aec0;
+}
+
+/* The output div that shows the result */
+#output-text {
+    min-height: 360px;
+    padding: 1.25rem;
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: var(--text-primary);
+    /* Allows long words to wrap instead of overflow */
+    word-break: break-word;
+    white-space: pre-wrap;     /* respects newlines in the output */
+}
+
+/* Placeholder shown before the user clicks Humanize */
+.output-placeholder {
+    height: 360px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    color: var(--text-muted);
+}
+
+.output-placeholder-icon {
+    font-size: 2.5rem;
+    opacity: 0.3;
+}
+
+.output-placeholder p {
+    font-size: 0.9rem;
+    text-align: center;
+    max-width: 200px;
+}
+
+
+/* ─── BOTTOM BAR (CHARACTER COUNT + HUMANIZE BUTTON) ────────────────────────*/
+
+.panel-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.875rem 1.25rem;
+    border-top: 1px solid var(--border);
+    background: #fafafa;
+}
+
+.char-count {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+/* The main Humanize button */
+.btn-humanize {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.6rem 1.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    /* Smooth color transition on hover */
+    transition: background 0.15s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-humanize:hover:not(:disabled) {
+    background: var(--accent-hover);
+    transform: translateY(-1px);  /* subtle lift effect */
+}
+
+.btn-humanize:active:not(:disabled) {
+    transform: translateY(0);     /* press back down on click */
+}
+
+.btn-humanize:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+
+/* ─── LOADING STATE ──────────────────────────────────────────────────────────*/
+
+/* Shown inside the output panel while API is processing */
+.loading-state {
+    height: 360px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    color: var(--text-muted);
+}
+
+/* Three bouncing dots */
+.loading-dots {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.loading-dots span {
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: bounce 1.2s infinite;
+}
+
+/* Each dot starts its bounce at a different time */
+.loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes bounce {
+    0%, 80%, 100% { transform: translateY(0); }
+    40%           { transform: translateY(-10px); }
+}
+
+.loading-state p {
+    font-size: 0.875rem;
+}
+
+
+/* ─── STATS BAR ──────────────────────────────────────────────────────────────
+
+   Shown after humanization is complete.
+   Displays word count before/after and patterns changed.
+*/
+.stats-bar {
+    display: flex;
+    gap: 1.5rem;
+    padding: 0.875rem 1.25rem;
+    border-top: 1px solid var(--border);
+    background: var(--accent-light);
+    /* Hidden by default, shown after successful humanization */
+    display: none;
+}
+
+.stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.stat-value {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--accent);
+}
+
+
+/* ─── TOAST NOTIFICATION ─────────────────────────────────────────────────────
+
+   Small popup in the bottom right to confirm actions like "Copied!"
+*/
+.toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--text-primary);
+    color: white;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    /* Hidden by default */
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.25s;
+    pointer-events: none;   /* doesn't block clicks when invisible */
+    z-index: 999;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+
+/* ─── RESPONSIVE: STACK ON MOBILE ────────────────────────────────────────────
+
+   On small screens (phone), switch from 2 columns to 1 column (stacked).
+*/
+@media (max-width: 768px) {
+    main { padding: 1rem; }
+    .hero h1 { font-size: 1.5rem; }
+
+    /* Switch to single column on mobile */
+    .panels { grid-template-columns: 1fr; }
+}

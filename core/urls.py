@@ -1,0 +1,21 @@
+"""
+core/urls.py
+------------
+URL routes specific to our core app.
+
+This file lists which URL paths map to which view functions.
+Django reads this after being pointed here from humanizer/urls.py.
+
+Pattern:
+    path('url-pattern/', view_function, name='name-for-this-route')
+"""
+
+from django.urls import path
+from . import views  # Import views from this same app (the dot means "current folder")
+
+urlpatterns = [
+    # The empty string '' means the root URL: yoursite.com/
+    # views.index is the function we will write in views.py
+    # name='index' lets us refer to this URL by name in templates
+    path('', views.index, name='index'),
+]

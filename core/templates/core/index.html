@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Humanizer - Make AI Text Sound Human</title>
+    <link rel="stylesheet" href="{% static 'core/style.css' %}">
+</head>
+<body>
+
+    <header>
+        <a href="/" class="logo">
+            <div class="logo-dot"></div>
+            Humanizer
+        </a>
+        <span class="header-badge">Powered by GPT-4o mini</span>
+    </header>
+
+    <main>
+
+        <div class="hero">
+            <h1>Make AI text sound <span>human</span></h1>
+            <p>Paste your AI-generated text and get a natural,
+               human-written version in seconds.</p>
+        </div>
+
+        <div class="panels">
+
+            <!-- LEFT PANEL: INPUT -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-label">AI-generated text</span>
+                </div>
+
+                <textarea
+                    id="input-text"
+                    placeholder="Paste your AI-generated text here...
+
+For example:
+In today's rapidly evolving technological landscape, leveraging cutting-edge solutions has become pivotal to fostering innovation and driving meaningful outcomes across diverse sectors."
+                ></textarea>
+
+                <div class="panel-footer">
+                    <span class="char-count" id="char-count">0 characters</span>
+                    <button class="btn-humanize" id="btn-humanize" disabled>
+                        ✦ Humanize
+                    </button>
+                </div>
+            </div>
+
+            <!-- RIGHT PANEL: OUTPUT -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-label">Humanized result</span>
+                    <button class="panel-action" id="btn-copy" style="display:none;">
+                        Copy
+                    </button>
+                </div>
+
+                <div id="output-area">
+                    <div class="output-placeholder">
+                        <div class="output-placeholder-icon">✦</div>
+                        <p>Your humanized text will appear here</p>
+                    </div>
+                </div>
+
+                <div class="panel-footer">
+                    <span></span>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="{% static 'core/main.js' %}"></script>
+
+</body>
+</html>
