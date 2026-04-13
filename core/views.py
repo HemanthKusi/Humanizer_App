@@ -129,7 +129,7 @@ def humanize(request: HttpRequest) -> JsonResponse:
             'text': llm_result['text'],
             'changes': rule_result['changes'],
             'stats': stats,
-            'mode': f"deep rewrite ({llm_result['model']})",
+            'mode': f"AI editor ({llm_result['model']})",
         })
 
     except json.JSONDecodeError:
