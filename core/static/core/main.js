@@ -3,18 +3,22 @@
     -------
     Handles all interactive behaviour on the page.
 
-    NOW UPDATED: The humanize button calls our real Django backend
-    at /api/humanize/ which runs the rule-based pattern engine.
+    UPDATED IN STEP 5:
+    - Reads the Deep Rewrite toggle state
+    - Sends deep_rewrite flag to the backend
+    - Updates toggle label text
+    - Shows warning messages if LLM fails
 
     Structure:
     1. DOM element references
     2. Character counter
-    3. Humanize button click handler
-    4. humanizeText() — real API call to Django backend
-    5. UI state functions (loading, result, error)
-    6. Changes report display
-    7. Copy button
-    8. Toast notifications
+    3. Toggle switch behavior
+    4. Humanize button click handler
+    5. humanizeText() — API call with toggle support
+    6. UI state functions
+    7. Changes report
+    8. Copy button
+    9. Toast notifications
 */
 
 
@@ -26,6 +30,8 @@ const charCount      = document.getElementById('char-count');
 const btnHumanize    = document.getElementById('btn-humanize');
 const btnCopy        = document.getElementById('btn-copy');
 const toast          = document.getElementById('toast');
+const toggleDeep     = document.getElementById('toggle-deep');
+const toggleLabel    = document.getElementById('toggle-label');
 
 
 /* ─── 2. CHARACTER COUNTER ───────────────────────────────────────────────── */
@@ -37,7 +43,27 @@ inputText.addEventListener('input', function() {
 });
 
 
-/* ─── 3. HUMANIZE BUTTON CLICK ───────────────────────────────────────────── */
+/* ─── 3. TOGGLE SWITCH BEHAVIOR ──────────────────────────────────────────── 
+
+   When the toggle changes, update the label text so the user
+   knows which mode they're in.
+   
+   OFF = "Quick fix"    (rule-based only, instant, free)
+   ON  = "Deep rewrite" (LLM, 2-5 sec, costs ~$0.002)
+*/
+
+toggleDeep.addEventListener('change', function() {
+    if (this.checked) {
+        toggleLabel.textContent = 'Deep rewrite';
+        toggleLabel.style.color = 'var(--accent)';
+    } else {
+        toggleLabel.textContent = 'Quick fix';
+        toggleLabel.style.color = 'var(--text-muted)';
+    }
+});
+
+
+/* ─── 4. HUMANIZE BUTTON CLICK ───────────────────────────────────────────── */
 
 btnHumanize.addEventListener('click', async function() {
     const text = inputText.value.trim();
@@ -55,42 +81,34 @@ btnHumanize.addEventListener('click', async function() {
 });
 
 
-/* ─── 4. HUMANIZE FUNCTION — REAL API CALL ───────────────────────────────── 
+/* ─── 5. HUMANIZE FUNCTION — API CALL WITH TOGGLE ────────────────────────── 
 
-   Sends the user's text to our Django backend at /api/humanize/
-   The backend runs the rule-based engine and returns JSON.
+   Sends the user's text to /api/humanize/ along with the toggle state.
 
-   Inputs:  text (string) — the AI-generated text to humanize
-   Outputs: Promise<object> — { text, changes, stats, mode }
-   Throws:  Error if the request fails or the server returns an error
+   Inputs:  text (string) — the AI-generated text
+   Outputs: Promise<object> — { text, changes, stats, mode, warning? }
+   Throws:  Error if the request fails
 */
 async function humanizeText(text) {
     /*
-     * fetch() sends an HTTP request to our Django backend.
-     *
-     * method: 'POST' — we're sending data to the server
-     * headers: tells the server we're sending JSON
-     * body: the actual data — our text wrapped in a JSON object
+     * Read whether the Deep Rewrite toggle is ON or OFF.
+     * .checked is a boolean: true if ON, false if OFF.
      */
+    const deepRewrite = toggleDeep.checked;
+
     const response = await fetch('/api/humanize/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ text: text }),
+        body: JSON.stringify({
+            text: text,
+            deep_rewrite: deepRewrite,
+        }),
     });
 
-    /*
-     * Parse the JSON response from the server.
-     * This gives us an object like:
-     * { text: "...", changes: [...], stats: {...}, mode: "rule-based" }
-     */
     const data = await response.json();
 
-    /*
-     * If the server returned an error (status 400 or 500),
-     * throw it so our catch block in the click handler catches it.
-     */
     if (!response.ok) {
         throw new Error(data.error || 'Something went wrong');
     }
@@ -99,15 +117,20 @@ async function humanizeText(text) {
 }
 
 
-/* ─── 5. UI STATE FUNCTIONS ──────────────────────────────────────────────── */
+/* ─── 6. UI STATE FUNCTIONS ──────────────────────────────────────────────── */
 
-/**
- * Shows the loading animation in the output panel.
- */
 function showLoading() {
     btnHumanize.disabled = true;
     btnHumanize.textContent = 'Humanizing...';
     btnCopy.style.display = 'none';
+
+    /*
+     * Show different loading message based on toggle state.
+     * Deep rewrite takes longer, so we set user expectations.
+     */
+    const message = toggleDeep.checked
+        ? 'Deep rewriting with AI... (this takes a few seconds)'
+        : 'Analyzing patterns...';
 
     outputArea.innerHTML = `
         <div class="loading-state">
@@ -116,15 +139,15 @@ function showLoading() {
                 <span></span>
                 <span></span>
             </div>
-            <p>Analyzing patterns...</p>
+            <p>${message}</p>
         </div>
     `;
 }
 
 /**
- * Shows the humanized result text and the changes report.
+ * Shows the humanized result text, stats, changes, and any warnings.
  *
- * @param {object} result — { text, changes, stats, mode }
+ * @param {object} result — { text, changes, stats, mode, warning? }
  */
 function showResult(result) {
     btnHumanize.disabled = false;
@@ -133,7 +156,16 @@ function showResult(result) {
     /* Build the output HTML */
     let html = `<div id="output-text">${escapeHtml(result.text)}</div>`;
 
-    /* Add the stats bar */
+    /* Show warning if LLM failed and we fell back to rule-based */
+    if (result.warning) {
+        html += `
+            <div class="warning-bar">
+                ⚠️ ${escapeHtml(result.warning)}
+            </div>
+        `;
+    }
+
+    /* Stats bar */
     html += `
         <div class="stats-bar" style="display: flex;">
             <div class="stat">
@@ -151,7 +183,7 @@ function showResult(result) {
         </div>
     `;
 
-    /* Add the changes report if there are changes */
+    /* Changes report */
     if (result.changes && result.changes.length > 0) {
         html += buildChangesReport(result.changes);
     }
@@ -160,11 +192,6 @@ function showResult(result) {
     btnCopy.style.display = 'inline-flex';
 }
 
-/**
- * Shows an error message in the output panel.
- *
- * @param {string} message — The error message to display
- */
 function showError(message) {
     btnHumanize.disabled = false;
     btnHumanize.innerHTML = '✦ Humanize';
@@ -178,14 +205,8 @@ function showError(message) {
 }
 
 
-/* ─── 6. CHANGES REPORT ─────────────────────────────────────────────────── 
+/* ─── 7. CHANGES REPORT ─────────────────────────────────────────────────── */
 
-   Builds an HTML list showing what patterns were detected and changed.
-   This helps the user understand what the engine did to their text.
-
-   @param {Array} changes — list of { pattern, name, detail } objects
-   @returns {string} — HTML string for the changes report
-*/
 function buildChangesReport(changes) {
     let items = '';
     for (const change of changes) {
@@ -202,19 +223,12 @@ function buildChangesReport(changes) {
 
     return `
         <div class="changes-report">
-            <div class="changes-header">Changes made</div>
+            <div class="changes-header">Changes made (rule-based pre-processing)</div>
             ${items}
         </div>
     `;
 }
 
-
-/**
- * Sanitizes text before inserting into HTML to prevent XSS.
- *
- * @param {string} text — Raw text to sanitize
- * @returns {string} — Safe HTML string
- */
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.appendChild(document.createTextNode(text));
@@ -222,7 +236,7 @@ function escapeHtml(text) {
 }
 
 
-/* ─── 7. COPY BUTTON ─────────────────────────────────────────────────────── */
+/* ─── 8. COPY BUTTON ─────────────────────────────────────────────────────── */
 
 btnCopy.addEventListener('click', async function() {
     const outputText = document.getElementById('output-text');
@@ -237,7 +251,7 @@ btnCopy.addEventListener('click', async function() {
 });
 
 
-/* ─── 8. TOAST NOTIFICATION ──────────────────────────────────────────────── */
+/* ─── 9. TOAST NOTIFICATION ──────────────────────────────────────────────── */
 
 function showToast(message) {
     toast.textContent = message;

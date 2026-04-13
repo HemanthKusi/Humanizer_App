@@ -3,18 +3,15 @@ core/views.py
 -------------
 Views handle web requests and return responses.
 
-We now have TWO views:
-1. index()     — Serves the homepage HTML (GET request)
-2. humanize()  — API endpoint that processes text (POST request)
+Two views:
+1. index()     — Serves the homepage (GET)
+2. humanize()  — API endpoint that processes text (POST)
 
-The humanize view receives text from the frontend via JavaScript fetch(),
-runs it through the rule-based engine, and returns JSON.
+The humanize view now supports two modes:
+    - deep_rewrite: false → Rule-based only (instant, free)
+    - deep_rewrite: true  → LLM rewrite (2-5 sec, costs ~$0.002)
 
-Why JSON?
-    Because the frontend uses JavaScript to call this endpoint
-    without reloading the page. This is called AJAX.
-    The frontend sends text → the backend returns JSON → JavaScript
-    updates the page with the result.
+The toggle switch on the frontend controls which mode is used.
 """
 
 import json
@@ -25,16 +22,12 @@ from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 
 from core.humanizer_engine import humanize_rule_based
+from core.llm_engine import humanize_with_llm
 
 
 def index(request: HttpRequest) -> HttpResponse:
     """
     Renders the homepage of the humanizer app.
-
-    What it does:
-        Serves the main HTML page with the two-panel UI.
-        All the interactive behavior is handled by JavaScript
-        in main.js, which calls the /api/humanize/ endpoint.
 
     Args:
         request: The incoming HTTP request
@@ -46,32 +39,25 @@ def index(request: HttpRequest) -> HttpResponse:
     return render(request, 'core/index.html', context)
 
 
-@csrf_exempt      # We'll handle CSRF properly later; for now this lets us test
-@require_POST     # Only accept POST requests, reject GET/PUT/DELETE
+@csrf_exempt
+@require_POST
 def humanize(request: HttpRequest) -> JsonResponse:
     """
-    API endpoint: receives text, runs rule-based humanization, returns JSON.
+    API endpoint: humanize text using rule-based and/or LLM engine.
 
-    This is the backend half of the Humanize button.
-
-    Flow:
-        1. Frontend sends POST request with JSON body: {"text": "..."}
-        2. This view extracts the text
-        3. Passes it to humanize_rule_based() from our engine
-        4. Returns the result as JSON
-
-    Request format:
-        POST /api/humanize/
-        Content-Type: application/json
-        Body: {"text": "Your AI-generated text here..."}
-
-    Response format:
+    The frontend sends:
         {
-            "text": "The humanized text...",
-            "changes": [...list of changes...],
-            "stats": {...summary stats...},
-            "mode": "rule-based"
+            "text": "...",
+            "deep_rewrite": true/false
         }
+
+    Flow when deep_rewrite is FALSE:
+        1. Run rule-based engine only
+        2. Return cleaned text + changes report
+
+    Flow when deep_rewrite is TRUE:
+        1. Send text to LLM for deep rewriting
+        2. Return LLM-rewritten text
 
     Args:
         request: The incoming HTTP POST request
@@ -80,37 +66,70 @@ def humanize(request: HttpRequest) -> JsonResponse:
         JsonResponse with humanized text, changes, and stats
     """
     try:
-        # Parse the JSON body from the request
-        # request.body is raw bytes, so we decode it to a string first
+        # Parse the JSON body
         body = json.loads(request.body.decode('utf-8'))
 
-        # Extract the text field
+        # Extract fields
         text = body.get('text', '').strip()
+        deep_rewrite = body.get('deep_rewrite', False)
 
-        # Validate: don't process empty text
+        # Validate: no empty text
         if not text:
             return JsonResponse(
                 {'error': 'No text provided. Please paste some text to humanize.'},
-                status=400  # 400 = Bad Request
+                status=400
             )
 
-        # Validate: don't process extremely long text (prevent abuse)
+        # Validate: length limit
         if len(text) > 50000:
             return JsonResponse(
                 {'error': 'Text is too long. Please keep it under 50,000 characters.'},
                 status=400
             )
 
-        # Run the rule-based humanizer engine
-        result = humanize_rule_based(text)
+        # ── Step 1: Always run rule-based engine first ──
+        rule_result = humanize_rule_based(text)
 
-        # Return the result as JSON
-        # "mode" tells the frontend which engine produced this result
+        # If toggle is OFF, return rule-based result only
+        if not deep_rewrite:
+            return JsonResponse({
+                'text': rule_result['text'],
+                'changes': rule_result['changes'],
+                'stats': rule_result['stats'],
+                'mode': 'rule-based',
+            })
+
+        # ── Step 2: Toggle is ON — send text to LLM ──
+        try:
+            llm_result = humanize_with_llm(text)
+        except Exception as llm_error:
+            # If the LLM fails, return the rule-based result as fallback
+            # with a warning so the user knows the LLM part failed
+            return JsonResponse({
+                'text': rule_result['text'],
+                'changes': rule_result['changes'],
+                'stats': rule_result['stats'],
+                'mode': 'rule-based (LLM failed)',
+                'warning': f'Deep rewrite failed: {str(llm_error)}. '
+                           f'Showing rule-based result instead.',
+            })
+
+        # Compute final stats comparing original to LLM output
+        original_word_count = len(text.split())
+        final_word_count = len(llm_result['text'].split())
+
+        stats = {
+            'original_words': original_word_count,
+            'final_words': final_word_count,
+            'words_removed': original_word_count - final_word_count,
+            'patterns_found': len(rule_result['changes']),
+        }
+
         return JsonResponse({
-            'text': result['text'],
-            'changes': result['changes'],
-            'stats': result['stats'],
-            'mode': 'rule-based',
+            'text': llm_result['text'],
+            'changes': rule_result['changes'],
+            'stats': stats,
+            'mode': f"deep rewrite ({llm_result['model']})",
         })
 
     except json.JSONDecodeError:
@@ -119,8 +138,7 @@ def humanize(request: HttpRequest) -> JsonResponse:
             status=400
         )
     except Exception as e:
-        # Catch any unexpected errors so the frontend gets a clean error
         return JsonResponse(
             {'error': f'Something went wrong: {str(e)}'},
-            status=500  # 500 = Internal Server Error
+            status=500
         )
