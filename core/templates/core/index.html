@@ -69,8 +69,8 @@
                 <div class="voice-toggle-left">
                     <span class="voice-icon">🎯</span>
                     <div class="voice-toggle-text">
-                        <span class="voice-title">Voice calibration</span>
-                        <span class="voice-subtitle">Paste your own writing to match your personal style</span>
+                        <span class="voice-title">Match your style</span>
+                    <span class="voice-subtitle">Paste your own writing so the output sounds like you</span>
                     </div>
                 </div>
                 <span class="voice-arrow" id="voice-arrow">▾</span>
@@ -82,11 +82,13 @@
                         id="voice-sample"
                         placeholder="Paste 2-3 paragraphs of your own writing here. The more you give, the better the style match.
 
-For example: a blog post you wrote, an email you're proud of, a report in your voice. Anything that sounds like YOU."
+Leave this empty to use the default deep rewrite.
+
+For example: a blog post you wrote, an email you're proud of, a report in your voice. Anything that sounds like YOU. Min 200 words, max 500 words."
                     ></textarea>
                     <div class="voice-meta">
                         <span class="voice-count" id="voice-count">0 words · 0 chars</span>
-                        <span class="voice-min">min 200 words · 1,000 chars</span>
+                        <span class="voice-min">200–500 words · 1,000–5,000 chars</span>
                     </div>
                 </div>
             </div>
@@ -103,7 +105,9 @@ For example: a blog post you wrote, an email you're proud of, a report in your v
                         <span class="panel-meta" id="input-meta">0 chars</span>
                     </div>
                     <div class="panel-body">
-                        <textarea id="input-text" placeholder="Paste your AI-generated text here..."></textarea>
+                        <textarea id="input-text" placeholder="Paste your AI-generated text here...
+
+Min 100 words · Max 500 words"></textarea>
                     </div>
                 </div>
 

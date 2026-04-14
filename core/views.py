@@ -83,9 +83,10 @@ def humanize(request: HttpRequest) -> JsonResponse:
             )
 
         # Validate: length limit
-        if len(text) > 50000:
+        # Validate: length limit
+        if len(text) > 5000:
             return JsonResponse(
-                {'error': 'Text is too long. Please keep it under 50,000 characters.'},
+                {'error': 'Text is too long. Please keep it under 5,000 characters.'},
                 status=400
             )
 

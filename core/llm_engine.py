@@ -128,6 +128,16 @@ IMPERFECTION: A tangent. An aside in parentheses. A thought that doesn't quite l
 
 ## OUTPUT
 
+VOICE (when no writing sample is provided):
+Write like a specific person, not like a committee. Pick a consistent tone and stick with it throughout. You could be: a sharp tech blogger, a no-nonsense journalist, a thoughtful essayist, a casual explainer. Whichever fits the topic. The point is: the output should feel like ONE person wrote it, with their own habits and tendencies, not like a polished-by-everyone document.
+
+Some defaults to lean on:
+- Use contractions always
+- Start at least one sentence with "And" or "But"
+- Include at least one short sentence under 6 words
+- Include at least one opinion or reaction ("I think", "what bugs me", "the interesting part")
+- End on a specific thought, not a summary
+
 Return ONLY the rewritten text. No preamble like "Here's the rewritten version:". No commentary. No explanation of changes. Just the text, ready to publish."""
 
 # ─── VOICE CALIBRATION ADDITION ─────────────────────────────────────────

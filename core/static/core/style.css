@@ -960,3 +960,12 @@ body.premium .btn-rewrite:hover:not(:disabled) {
 .voice-warning.show {
     display: block;
 }
+
+/* Voice section hidden by default, shown only in premium/deep mode */
+.voice-section {
+    display: none;
+}
+
+body.premium .voice-section {
+    display: block;
+}

@@ -137,6 +137,12 @@ const voiceCount   = document.getElementById('voice-count');
 
 const VOICE_MIN_WORDS = 200;
 const VOICE_MIN_CHARS = 1000;
+const VOICE_MAX_WORDS = 500;
+const VOICE_MAX_CHARS = 5000;
+const INPUT_MIN_WORDS = 100;
+const INPUT_MIN_CHARS = 1000;
+const INPUT_MAX_WORDS = 500;
+const INPUT_MAX_CHARS = 5000;
 document.querySelector('.btn-text').textContent = 'Quick Fix';
 
 
@@ -145,8 +151,54 @@ document.querySelector('.btn-text').textContent = 'Quick Fix';
    ═══════════════════════════════════════════════════════════════════ */
 
 inputText.addEventListener('input', function () {
-    const len = this.value.length;
-    const words = this.value.trim() ? this.value.trim().split(/\s+/).length : 0;
+    let text = this.value;
+
+    /* Silently truncate to max chars */
+    if (text.length > INPUT_MAX_CHARS) {
+        text = text.substring(0, INPUT_MAX_CHARS);
+        /* Cut at last sentence boundary within limit */
+        const lastPeriod = text.lastIndexOf('.');
+        const lastQuestion = text.lastIndexOf('?');
+        const lastExclaim = text.lastIndexOf('!');
+        const lastSentence = Math.max(lastPeriod, lastQuestion, lastExclaim);
+        if (lastSentence > INPUT_MAX_CHARS * 0.5) {
+            text = text.substring(0, lastSentence + 1);
+        }
+        this.value = text;
+    }
+
+    /* Also check word limit */
+    const wordsArr = text.trim() ? text.trim().split(/\s+/) : [];
+    if (wordsArr.length > INPUT_MAX_WORDS) {
+        /* Find the position after the 500th word */
+        let count = 0;
+        let cutIndex = 0;
+        for (let i = 0; i < text.length; i++) {
+            if (/\s/.test(text[i]) && i > 0 && !/\s/.test(text[i - 1])) {
+                count++;
+                if (count >= INPUT_MAX_WORDS) {
+                    cutIndex = i;
+                    break;
+                }
+            }
+        }
+        if (cutIndex > 0) {
+            text = text.substring(0, cutIndex);
+            /* Cut at last sentence boundary */
+            const lastPeriod = text.lastIndexOf('.');
+            const lastQuestion = text.lastIndexOf('?');
+            const lastExclaim = text.lastIndexOf('!');
+            const lastSentence = Math.max(lastPeriod, lastQuestion, lastExclaim);
+            if (lastSentence > text.length * 0.5) {
+                text = text.substring(0, lastSentence + 1);
+            }
+            this.value = text;
+        }
+    }
+
+    const trimmed = this.value.trim();
+    const len = trimmed.length;
+    const words = trimmed ? trimmed.split(/\s+/).length : 0;
     inputMeta.textContent = words > 0 ? `${words.toLocaleString()} words · ${len.toLocaleString()} chars` : '0';
     btnRewrite.disabled = len === 0;
 });
@@ -217,13 +269,54 @@ voiceToggle.addEventListener('click', function () {
 
 /* Update word/char count as user types */
 voiceSample.addEventListener('input', function () {
-    const text = this.value;
-    const len = text.length;
-    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    let text = this.value;
+
+    /* Silently truncate to max chars */
+    if (text.length > VOICE_MAX_CHARS) {
+        text = text.substring(0, VOICE_MAX_CHARS);
+        const lastPeriod = text.lastIndexOf('.');
+        const lastQuestion = text.lastIndexOf('?');
+        const lastExclaim = text.lastIndexOf('!');
+        const lastSentence = Math.max(lastPeriod, lastQuestion, lastExclaim);
+        if (lastSentence > VOICE_MAX_CHARS * 0.5) {
+            text = text.substring(0, lastSentence + 1);
+        }
+        this.value = text;
+    }
+
+    /* Also check word limit */
+    const wordsArr = text.trim() ? text.trim().split(/\s+/) : [];
+    if (wordsArr.length > VOICE_MAX_WORDS) {
+        let count = 0;
+        let cutIndex = 0;
+        for (let i = 0; i < text.length; i++) {
+            if (/\s/.test(text[i]) && i > 0 && !/\s/.test(text[i - 1])) {
+                count++;
+                if (count >= VOICE_MAX_WORDS) {
+                    cutIndex = i;
+                    break;
+                }
+            }
+        }
+        if (cutIndex > 0) {
+            text = text.substring(0, cutIndex);
+            const lastPeriod = text.lastIndexOf('.');
+            const lastQuestion = text.lastIndexOf('?');
+            const lastExclaim = text.lastIndexOf('!');
+            const lastSentence = Math.max(lastPeriod, lastQuestion, lastExclaim);
+            if (lastSentence > text.length * 0.5) {
+                text = text.substring(0, lastSentence + 1);
+            }
+            this.value = text;
+        }
+    }
+
+    const trimmed = this.value.trim();
+    const len = trimmed.length;
+    const words = trimmed ? trimmed.split(/\s+/).length : 0;
 
     voiceCount.textContent = `${words.toLocaleString()} words · ${len.toLocaleString()} chars`;
 
-    /* Show green when minimum is met */
     if (words >= VOICE_MIN_WORDS && len >= VOICE_MIN_CHARS) {
         voiceCount.classList.add('valid');
     } else {
@@ -233,10 +326,15 @@ voiceSample.addEventListener('input', function () {
 
 /**
  * Check if voice sample is valid.
- * Returns the sample text if valid, empty string if no sample,
- * or null if sample exists but is too short (shows error).
+ * Returns:
+ *   ''    — no sample provided (or toggle is off) — use default style
+ *   text  — valid sample text — use voice matching
+ *   null  — sample exists but too short — show error
  */
 function getVoiceSample() {
+    /* Voice matching only works in Deep Rewrite mode */
+    if (!toggleDeep.checked) return '';
+
     const text = voiceSample.value.trim();
 
     /* No sample at all — that's fine, it's optional */
@@ -280,6 +378,16 @@ btnRewrite.addEventListener('click', async function () {
 
 async function callAPI(text) {
     const deepRewrite = toggleDeep.checked;
+    /* Validate input minimum */
+    const inputWords = text.trim().split(/\s+/).length;
+    const inputChars = text.trim().length;
+
+    if (inputWords < INPUT_MIN_WORDS || inputChars < INPUT_MIN_CHARS) {
+        throw new Error(
+            `Text too short: ${inputWords} words / ${inputChars} chars. ` +
+            `Need at least ${INPUT_MIN_WORDS} words and ${INPUT_MIN_CHARS} chars.`
+        );
+    }
     const voiceSampleText = getVoiceSample();
 
     /* Voice sample exists but too short */
@@ -324,9 +432,17 @@ function showLoading() {
     const existing = document.querySelector('.changes-report');
     if (existing) existing.remove();
 
-    const message = toggleDeep.checked
-        ? 'Deep rewriting with AI...'
-        : 'Applying pattern fixes...';
+    /* Pick loading message based on mode + voice sample */
+    let message = 'Applying pattern fixes...';
+
+    if (toggleDeep.checked) {
+        const sample = voiceSample.value.trim();
+        if (sample.length > 0) {
+            message = 'Matching your writing style...';
+        } else {
+            message = 'Deep Rewriting...';
+        }
+    }
 
     outputArea.innerHTML = `
         <div class="loading-state">
