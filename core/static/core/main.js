@@ -481,17 +481,8 @@ function showResult(result) {
 
     resultStats.innerHTML = `
         <span>${origWords}</span> → <span>${finalWords}</span> words
-        <span class="stat-dot">·</span>
-        <span>${patternsFound}</span> patterns
     `;
     resultStats.style.display = 'block';
-
-    /* Collapsible changes report */
-    if (result.changes && result.changes.length > 0) {
-        const reportEl = buildChangesReport(result.changes);
-        const panelOutput = document.getElementById('panel-output');
-        panelOutput.appendChild(reportEl);
-    }
 
     btnCopy.style.display = 'flex';
 }
@@ -519,8 +510,6 @@ function showError(message) {
    ═══════════════════════════════════════════════════════════════════ */
 
 function buildChangesReport(changes) {
-    const existing = document.querySelector('.changes-report');
-    if (existing) existing.remove();
 
     const wrapper = document.createElement('div');
     wrapper.className = 'changes-report';

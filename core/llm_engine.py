@@ -124,6 +124,8 @@ IMPERFECTION: A tangent. An aside in parentheses. A thought that doesn't quite l
 - Write in paragraphs, not lists (unless a list genuinely makes sense)
 - Don't start more than one paragraph with the same word
 - Don't use semicolons in casual or general writing
+- Don't use em dashes (—). Use commas, periods, or "and" instead. This is critical. Zero em dashes in the output.
+- Don't use double hyphens (--) either
 - Never write "In conclusion" or "To summarize" or "Overall"
 
 ## OUTPUT
