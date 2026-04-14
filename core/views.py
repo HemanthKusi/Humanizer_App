@@ -70,8 +70,10 @@ def humanize(request: HttpRequest) -> JsonResponse:
         body = json.loads(request.body.decode('utf-8'))
 
         # Extract fields
+        # Extract fields
         text = body.get('text', '').strip()
         deep_rewrite = body.get('deep_rewrite', False)
+        voice_sample = body.get('voice_sample', '').strip()
 
         # Validate: no empty text
         if not text:
@@ -101,7 +103,7 @@ def humanize(request: HttpRequest) -> JsonResponse:
 
         # ── Step 2: Toggle is ON — send text to LLM ──
         try:
-            llm_result = humanize_with_llm(text)
+            llm_result = humanize_with_llm(text, voice_sample=voice_sample)
         except Exception as llm_error:
             # If the LLM fails, return the rule-based result as fallback
             # with a warning so the user knows the LLM part failed

@@ -63,6 +63,35 @@
             </button>
         </div>
 
+        <!-- Voice Calibration -->
+        <div class="voice-section" id="voice-section">
+            <button class="voice-toggle" id="voice-toggle">
+                <div class="voice-toggle-left">
+                    <span class="voice-icon">🎯</span>
+                    <div class="voice-toggle-text">
+                        <span class="voice-title">Voice calibration</span>
+                        <span class="voice-subtitle">Paste your own writing to match your personal style</span>
+                    </div>
+                </div>
+                <span class="voice-arrow" id="voice-arrow">▾</span>
+            </button>
+
+            <div class="voice-body" id="voice-body">
+                <div class="voice-input-wrapper">
+                    <textarea
+                        id="voice-sample"
+                        placeholder="Paste 2-3 paragraphs of your own writing here. The more you give, the better the style match.
+
+For example: a blog post you wrote, an email you're proud of, a report in your voice. Anything that sounds like YOU."
+                    ></textarea>
+                    <div class="voice-meta">
+                        <span class="voice-count" id="voice-count">0 words · 0 chars</span>
+                        <span class="voice-min">min 200 words · 1,000 chars</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Panels — identical structure, no footers -->
         <div class="panels-wrapper">
             <div class="panels">

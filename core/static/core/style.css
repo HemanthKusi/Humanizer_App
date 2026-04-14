@@ -802,3 +802,161 @@ body.premium .btn-rewrite:hover:not(:disabled) {
 .btn-rewrite.pulse {
     animation: btnPulse 0.8s ease-out;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   VOICE CALIBRATION SECTION
+   ═══════════════════════════════════════════════════════════════════ */
+
+.voice-section {
+    max-width: 1320px;
+    margin: 0 auto 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    transition: all 0.6s ease;
+}
+
+/* Toggle bar */
+.voice-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.7rem 1.15rem;
+    width: 100%;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font-body);
+    color: var(--text-primary);
+    transition: background 0.2s ease;
+}
+
+.voice-toggle:hover {
+    background: var(--accent-soft);
+}
+
+.voice-toggle-left {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+}
+
+.voice-icon {
+    font-size: 1rem;
+}
+
+.voice-toggle-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+}
+
+.voice-title {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    transition: color 0.6s ease;
+}
+
+.voice-subtitle {
+    font-size: 0.68rem;
+    color: var(--text-tertiary);
+    transition: color 0.6s ease;
+}
+
+.voice-arrow {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    transition: transform 0.3s ease;
+}
+
+.voice-section.open .voice-arrow {
+    transform: rotate(180deg);
+}
+
+/* Collapsible body */
+.voice-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.voice-section.open .voice-body {
+    max-height: 300px;
+}
+
+.voice-input-wrapper {
+    padding: 0 1.15rem 0.85rem;
+}
+
+/* Textarea */
+#voice-sample {
+    width: 100%;
+    height: 140px;
+    padding: 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    outline: none;
+    resize: none;
+    font-size: 0.85rem;
+    line-height: 1.7;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    background: var(--bg);
+    transition: border-color 0.2s ease, background 0.6s ease, color 0.6s ease;
+}
+
+#voice-sample:focus {
+    border-color: var(--accent);
+}
+
+#voice-sample::placeholder {
+    color: var(--text-tertiary);
+    font-size: 0.82rem;
+}
+
+#voice-sample::-webkit-scrollbar { width: 5px; }
+#voice-sample::-webkit-scrollbar-track { background: transparent; }
+#voice-sample::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+
+/* Meta line below textarea */
+.voice-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.4rem 0.1rem 0;
+}
+
+.voice-count {
+    font-size: 0.68rem;
+    color: var(--text-tertiary);
+    font-variant-numeric: tabular-nums;
+    transition: color 0.3s ease;
+}
+
+/* Turns accent color when minimum is met */
+.voice-count.valid {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.voice-min {
+    font-size: 0.65rem;
+    color: var(--text-tertiary);
+    opacity: 0.6;
+}
+
+/* Warning when sample is too short and user tries to rewrite */
+.voice-warning {
+    font-size: 0.72rem;
+    color: #dc2626;
+    padding: 0.3rem 0.1rem 0;
+    display: none;
+}
+
+.voice-warning.show {
+    display: block;
+}

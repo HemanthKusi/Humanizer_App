@@ -130,54 +130,82 @@ IMPERFECTION: A tangent. An aside in parentheses. A thought that doesn't quite l
 
 Return ONLY the rewritten text. No preamble like "Here's the rewritten version:". No commentary. No explanation of changes. Just the text, ready to publish."""
 
+# ─── VOICE CALIBRATION ADDITION ─────────────────────────────────────────
+#
+# When a user provides a writing sample, this gets PREPENDED to the
+# system prompt. It tells the LLM to analyze the sample and match
+# that specific person's voice instead of using generic good-writing style.
+
+VOICE_CALIBRATION_PROMPT = """IMPORTANT — VOICE MATCHING MODE:
+
+The user has provided a sample of their own writing below. Before you rewrite anything, analyze this sample carefully. Note:
+
+- Their average sentence length (short and punchy? Long and flowing? Mixed?)
+- Their vocabulary level (casual? academic? technical? somewhere between?)
+- How they start paragraphs (jump right in? Set context? Use transitions?)
+- Punctuation habits (lots of commas? Dashes? Parenthetical asides? Simple periods?)
+- Any verbal tics or recurring patterns (do they say "honestly"? "I think"? "look"?)
+- Their tone (confident? tentative? sarcastic? earnest? dry?)
+- How they handle transitions between ideas
+
+Now rewrite the AI text in THEIR voice, not in generic "good writing" voice. Match their rhythm, their word choices, their quirks. If they write short choppy sentences, you write short choppy sentences. If they use "stuff" and "things", don't upgrade to "elements" and "components". Mirror them.
+
+=== USER'S WRITING SAMPLE ===
+{sample}
+=== END OF SAMPLE ===
+
+Now rewrite the following text in this person's voice:
+"""
+
 
 # ─── API CALL FUNCTIONS ─────────────────────────────────────────────────────
 
 
-def call_openai(text):
+def call_openai(text, voice_sample=''):
     """
     Send text to OpenAI's API for quality rewriting.
 
-    Uses a single pass with the detailed system prompt.
-    frequency_penalty and presence_penalty encourage varied
-    word choices and reduce repetition.
+    If a voice_sample is provided, the prompt includes voice
+    calibration instructions that tell the LLM to match the
+    user's personal writing style.
 
     Args:
         text (str): The original AI-generated text to rewrite
+        voice_sample (str): Optional user writing sample for style matching
 
     Returns:
         str: The rewritten text
     """
     client = OpenAI()
 
+    # Build the system prompt
+    if voice_sample:
+        system = VOICE_CALIBRATION_PROMPT.format(sample=voice_sample) + "\n\n" + SYSTEM_PROMPT
+    else:
+        system = SYSTEM_PROMPT
+
     response = client.chat.completions.create(
         model=LLM_MODEL,
         messages=[
-            {
-                "role": "system",
-                "content": SYSTEM_PROMPT,
-            },
-            {
-                "role": "user",
-                "content": text,
-            },
+            {"role": "system", "content": system},
+            {"role": "user", "content": text},
         ],
-        temperature=0.95,       # Creative but not chaotic
+        temperature=0.95,
         max_tokens=4096,
-        frequency_penalty=0.4,  # Discourage repeating the same words
-        presence_penalty=0.3,   # Encourage covering new ground
+        frequency_penalty=0.4,
+        presence_penalty=0.3,
     )
 
     return response.choices[0].message.content.strip()
 
 
-def call_anthropic(text):
+def call_anthropic(text, voice_sample=''):
     """
     Send text to Anthropic's Claude API for quality rewriting.
-    Ready for when you switch providers.
 
     Args:
         text (str): The original AI-generated text to rewrite
+        voice_sample (str): Optional user writing sample for style matching
 
     Returns:
         str: The rewritten text
@@ -186,15 +214,17 @@ def call_anthropic(text):
 
     client = anthropic.Anthropic()
 
+    if voice_sample:
+        system = VOICE_CALIBRATION_PROMPT.format(sample=voice_sample) + "\n\n" + SYSTEM_PROMPT
+    else:
+        system = SYSTEM_PROMPT
+
     response = client.messages.create(
         model=LLM_MODEL,
         max_tokens=4096,
-        system=SYSTEM_PROMPT,
+        system=system,
         messages=[
-            {
-                "role": "user",
-                "content": text,
-            },
+            {"role": "user", "content": text},
         ],
     )
 
@@ -204,34 +234,28 @@ def call_anthropic(text):
 # ─── MAIN ENTRY POINT ───────────────────────────────────────────────────────
 
 
-def humanize_with_llm(text):
+def humanize_with_llm(text, voice_sample=''):
     """
     Rewrite AI-generated text into quality human writing.
 
-    Single-pass approach: one strong prompt through a capable model
-    produces better results than multiple weaker passes.
-
-    The system prompt handles all 29 SKILL.md patterns plus
-    the "soul" additions (voice, rhythm, opinions, specificity).
+    If voice_sample is provided, the output will match that
+    person's writing style instead of using generic good-writing voice.
 
     Args:
         text (str): The original AI-generated text
+        voice_sample (str): Optional writing sample to match style
 
     Returns:
         dict: {
-            'text': str,        # The rewritten text
-            'provider': str,    # Which LLM provider was used
-            'model': str,       # Which model was used
+            'text': str,
+            'provider': str,
+            'model': str,
         }
-
-    Raises:
-        ValueError: If LLM_PROVIDER in .env is not recognized
-        Exception: If the API call fails
     """
     if LLM_PROVIDER == 'openai':
-        rewritten = call_openai(text)
+        rewritten = call_openai(text, voice_sample)
     elif LLM_PROVIDER == 'anthropic':
-        rewritten = call_anthropic(text)
+        rewritten = call_anthropic(text, voice_sample)
     else:
         raise ValueError(
             f'Unknown LLM provider: "{LLM_PROVIDER}". '

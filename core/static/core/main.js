@@ -128,6 +128,15 @@ const toggleDeep  = document.getElementById('toggle-deep');
 const modeQuick   = document.getElementById('mode-quick');
 const modeDeep    = document.getElementById('mode-deep');
 const resultStats = document.getElementById('result-stats');
+/* Voice calibration elements */
+const voiceSection = document.getElementById('voice-section');
+const voiceToggle  = document.getElementById('voice-toggle');
+const voiceBody    = document.getElementById('voice-body');
+const voiceSample  = document.getElementById('voice-sample');
+const voiceCount   = document.getElementById('voice-count');
+
+const VOICE_MIN_WORDS = 200;
+const VOICE_MIN_CHARS = 1000;
 document.querySelector('.btn-text').textContent = 'Quick Fix';
 
 
@@ -197,6 +206,53 @@ modeDeep.addEventListener('click', function () {
     }
 });
 
+/* ═══════════════════════════════════════════════════════════════════
+   VOICE CALIBRATION
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Toggle open/close */
+voiceToggle.addEventListener('click', function () {
+    voiceSection.classList.toggle('open');
+});
+
+/* Update word/char count as user types */
+voiceSample.addEventListener('input', function () {
+    const text = this.value;
+    const len = text.length;
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+
+    voiceCount.textContent = `${words.toLocaleString()} words · ${len.toLocaleString()} chars`;
+
+    /* Show green when minimum is met */
+    if (words >= VOICE_MIN_WORDS && len >= VOICE_MIN_CHARS) {
+        voiceCount.classList.add('valid');
+    } else {
+        voiceCount.classList.remove('valid');
+    }
+});
+
+/**
+ * Check if voice sample is valid.
+ * Returns the sample text if valid, empty string if no sample,
+ * or null if sample exists but is too short (shows error).
+ */
+function getVoiceSample() {
+    const text = voiceSample.value.trim();
+
+    /* No sample at all — that's fine, it's optional */
+    if (text.length === 0) return '';
+
+    const words = text.split(/\s+/).length;
+    const chars = text.length;
+
+    /* Sample exists but too short */
+    if (words < VOICE_MIN_WORDS || chars < VOICE_MIN_CHARS) {
+        return null;
+    }
+
+    return text;
+}
+
 
 /* ═══════════════════════════════════════════════════════════════════
    5. REWRITE BUTTON
@@ -224,11 +280,27 @@ btnRewrite.addEventListener('click', async function () {
 
 async function callAPI(text) {
     const deepRewrite = toggleDeep.checked;
+    const voiceSampleText = getVoiceSample();
+
+    /* Voice sample exists but too short */
+    if (voiceSampleText === null) {
+        const words = voiceSample.value.trim().split(/\s+/).length;
+        const chars = voiceSample.value.trim().length;
+        throw new Error(
+            `Voice sample too short: ${words} words / ${chars} chars. ` +
+            `Need at least ${VOICE_MIN_WORDS} words and ${VOICE_MIN_CHARS} chars. ` +
+            `Add more text or clear the sample to use default style.`
+        );
+    }
 
     const response = await fetch('/api/humanize/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, deep_rewrite: deepRewrite }),
+        body: JSON.stringify({
+            text,
+            deep_rewrite: deepRewrite,
+            voice_sample: voiceSampleText,
+        }),
     });
 
     const data = await response.json();
