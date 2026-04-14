@@ -4,85 +4,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Humanizer - Make AI Text Sound Human</title>
+    <title>Rewright — Make AI Writing Actually Good</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="{% static 'core/style.css' %}">
 </head>
 <body>
 
+    <!-- Backgrounds -->
+    <canvas id="solar-system"></canvas>
+    <div class="bg-aurora"></div>
+    <div class="bg-grain"></div>
+
+    <!-- ─── HEADER ──────────────────────────────────── -->
     <header>
         <a href="/" class="logo">
-            <div class="logo-dot"></div>
-            Humanizer
+            <div class="logo-mark">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="4" fill="var(--accent)" class="logo-core"/>
+                    <circle cx="12" cy="12" r="8" stroke="var(--accent)" stroke-width="1" opacity="0.3"/>
+                    <circle cx="12" cy="4" r="2" fill="var(--accent)" opacity="0.6" class="logo-electron"/>
+                </svg>
+            </div>
+            <span class="logo-text">Rewright</span>
         </a>
-        <span class="header-badge">AI writing editor</span>
     </header>
 
+    <!-- ─── MAIN ────────────────────────────────────── -->
     <main>
 
         <div class="hero">
-            <h1>Make AI writing <span>actually good</span></h1>
-            <p>Paste your AI-generated draft and get concise,
-               specific, opinionated writing that's worth reading.</p>
+            <div class="hero-eyebrow">AI Writing Editor</div>
+            <h1>Make AI writing<br><em>actually good</em></h1>
+            <p>Paste your AI-generated draft. Get writing worth reading.</p>
         </div>
 
-        <div class="panels">
+        <!-- Toggle -->
+        <div class="mode-bar">
+            <button class="mode-btn active" id="mode-quick">
+                <span class="mode-btn-icon">⚡</span>
+                Quick fix
+            </button>
+            <label class="toggle-switch">
+                <input type="checkbox" id="toggle-deep" />
+                <span class="toggle-track">
+                    <span class="toggle-glow"></span>
+                    <span class="toggle-knob">
+                        <span class="knob-icon">✦</span>
+                    </span>
+                </span>
+            </label>
+            <button class="mode-btn" id="mode-deep">
+                <span class="mode-btn-icon">✦</span>
+                Deep rewrite
+            </button>
+        </div>
 
-            <!-- LEFT PANEL: INPUT -->
-            <div class="panel">
-                <div class="panel-header">
-                    <span class="panel-label">AI-generated text</span>
-                    <div class="toggle-wrapper">
-                        <span class="toggle-label" id="toggle-label">Quick fix</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-deep" />
-                            <span class="toggle-slider"></span>
-                        </label>
+        <!-- Panels — identical structure, no footers -->
+        <div class="panels-wrapper">
+            <div class="panels">
+
+                <!-- INPUT -->
+                <div class="panel" id="panel-input">
+                    <div class="panel-header">
+                        <span class="panel-label">Your AI draft</span>
+                        <span class="panel-meta" id="input-meta">0 chars</span>
+                    </div>
+                    <div class="panel-body">
+                        <textarea id="input-text" placeholder="Paste your AI-generated text here..."></textarea>
                     </div>
                 </div>
 
-                <textarea
-                    id="input-text"
-                    placeholder="Paste your AI-generated text here...
-
-For example:
-In today's rapidly evolving technological landscape, leveraging cutting-edge solutions has become pivotal to fostering innovation and driving meaningful outcomes across diverse sectors."
-                ></textarea>
-
-                <div class="panel-footer">
-                    <span class="char-count" id="char-count">0 characters</span>
-                    <button class="btn-humanize" id="btn-humanize" disabled>
-                        ✦ Humanize
-                    </button>
-                </div>
-            </div>
-
-            <!-- RIGHT PANEL: OUTPUT -->
-            <div class="panel">
-                <div class="panel-header">
-                    <span class="panel-label">Humanized result</span>
-                    <button class="panel-action" id="btn-copy" style="display:none;">
-                        Copy
-                    </button>
-                </div>
-
-                <div id="output-area">
-                    <div class="output-placeholder">
-                        <div class="output-placeholder-icon">✦</div>
-                        <p>Your humanized text will appear here</p>
+                <!-- OUTPUT -->
+                <div class="panel" id="panel-output">
+                    <div class="panel-header">
+                        <span class="panel-label">Result</span>
+                        <div class="panel-header-right">
+                            <span class="panel-meta" id="output-meta"></span>
+                            <button class="btn-copy" id="btn-copy" style="display:none;" title="Copy to clipboard">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                     stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <div id="output-area">
+                            <div class="output-placeholder">
+                                <div class="placeholder-orb">
+                                    <span></span><span></span><span></span>
+                                </div>
+                                <p>Your improved text<br>will appear here</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="panel-footer">
-                    <span></span>
-                </div>
             </div>
 
+            <!-- Rewrite button — centered below panels -->
+            <div class="action-bar">
+                <button class="btn-rewrite" id="btn-rewrite" disabled>
+                    <span class="btn-shine"></span>
+                    <span class="btn-icon">✦</span>
+                    <span class="btn-text">Rewrite</span>
+                </button>
+            </div>
+
+            <!-- Stats line — shown after processing -->
+            <div class="result-stats" id="result-stats" style="display:none;"></div>
+
         </div>
+
     </main>
 
     <div class="toast" id="toast"></div>
-
     <script src="{% static 'core/main.js' %}"></script>
-
 </body>
 </html>

@@ -1,213 +1,342 @@
 /*
-    main.js
-    -------
-    Handles all interactive behaviour on the page.
+    main.js — Rewright UI Controller
 
-    UPDATED IN STEP 5:
-    - Reads the Deep Rewrite toggle state
-    - Sends deep_rewrite flag to the backend
-    - Updates toggle label text
-    - Shows warning messages if LLM fails
-
-    Structure:
-    1. DOM element references
-    2. Character counter
-    3. Toggle switch behavior
-    4. Humanize button click handler
-    5. humanizeText() — API call with toggle support
-    6. UI state functions
-    7. Changes report
-    8. Copy button
-    9. Toast notifications
+    1. Solar system background
+    2. Theme toggling
+    3. Character counters (both panels)
+    4. Rewrite button → API call
+    5. Result + inline stats + collapsible changes
+    6. Copy with checkmark
+    7. Toast
 */
 
 
-/* ─── 1. DOM ELEMENT REFERENCES ──────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════
+   1. SOLAR SYSTEM BACKGROUND
+   ═══════════════════════════════════════════════════════════════════ */
 
-const inputText      = document.getElementById('input-text');
-const outputArea     = document.getElementById('output-area');
-const charCount      = document.getElementById('char-count');
-const btnHumanize    = document.getElementById('btn-humanize');
-const btnCopy        = document.getElementById('btn-copy');
-const toast          = document.getElementById('toast');
-const toggleDeep     = document.getElementById('toggle-deep');
-const toggleLabel    = document.getElementById('toggle-label');
+const canvas = document.getElementById('solar-system');
+const ctx = canvas.getContext('2d');
+let isPremium = false;
+let time = 0;
+
+const sun = { xRatio: 0.15, yRatio: 0.35 };
+
+const planets = [
+    { orbitA: 0.08,  orbitB: 0.05, speed: 0.008,  size: 2.5, offset: 0,   color: [140,140,140] },  // Mercury — gray
+    { orbitA: 0.14,  orbitB: 0.08, speed: 0.005,  size: 4,   offset: 1.2, color: [232,205,160] },  // Venus — pale yellow
+    { orbitA: 0.22,  orbitB: 0.12, speed: 0.003,  size: 4.5, offset: 2.8, color: [75,125,201] },   // Earth — blue
+    { orbitA: 0.32,  orbitB: 0.17, speed: 0.002,  size: 3.5, offset: 0.7, color: [193,68,14] },    // Mars — red-orange
+    { orbitA: 0.42,  orbitB: 0.22, speed: 0.0012, size: 7,   offset: 4.1, color: [200,139,58] },   // Jupiter — orange-brown
+    { orbitA: 0.55,  orbitB: 0.28, speed: 0.0008, size: 6,   offset: 3.0, color: [228,209,145] },  // Saturn — golden
+];
+
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+
+function drawSolarSystem() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const sunX = canvas.width * sun.xRatio;
+    const sunY = canvas.height * sun.yRatio;
+    const alpha = isPremium ? 1 : 0.4;
+    const glowSize = isPremium ? 40 : 20;
+    const sunPulse = 1 + Math.sin(time * 0.02) * 0.15;
+
+    /* Sun glow */
+    const grad = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, glowSize * sunPulse);
+    if (isPremium) {
+        grad.addColorStop(0, 'rgba(240,160,48,0.6)');
+        grad.addColorStop(0.3, 'rgba(240,160,48,0.15)');
+        grad.addColorStop(1, 'rgba(240,160,48,0)');
+    } else {
+        grad.addColorStop(0, 'rgba(194,102,10,0.25)');
+        grad.addColorStop(0.3, 'rgba(194,102,10,0.06)');
+        grad.addColorStop(1, 'rgba(194,102,10,0)');
+    }
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, glowSize * sunPulse, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* Sun core */
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, isPremium ? 5 : 3, 0, Math.PI * 2);
+    ctx.fillStyle = isPremium ? 'rgba(240,160,48,0.8)' : 'rgba(194,102,10,0.35)';
+    ctx.fill();
+
+    /* Orbits + planets */
+    for (const p of planets) {
+        const a = p.orbitA * canvas.width;
+        const b = p.orbitB * canvas.height;
+        const angle = p.offset + time * p.speed;
+
+        /* Orbit ring */
+        ctx.beginPath();
+        ctx.ellipse(sunX, sunY, a, b, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = isPremium
+            ? 'rgba(240,160,48,0.06)'
+            : 'rgba(194,102,10,0.04)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        /* Planet position */
+        const px = sunX + Math.cos(angle) * a;
+        const py = sunY + Math.sin(angle) * b;
+
+        /* Planet glow (premium) */
+        if (isPremium) {
+            const pg = ctx.createRadialGradient(px, py, 0, px, py, p.size * 3);
+            pg.addColorStop(0, `rgba(${p.color[0]},${p.color[1]},${p.color[2]},0.2)`);
+            pg.addColorStop(1, `rgba(${p.color[0]},${p.color[1]},${p.color[2]},0)`);
+            ctx.fillStyle = pg;
+            ctx.beginPath();
+            ctx.arc(px, py, p.size * 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        /* Planet body */
+        ctx.beginPath();
+        ctx.arc(px, py, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${p.color[0]},${p.color[1]},${p.color[2]},${alpha * 0.5})`;
+        ctx.fill();
+    }
+
+    time++;
+    requestAnimationFrame(drawSolarSystem);
+}
+
+resizeCanvas();
+drawSolarSystem();
+window.addEventListener('resize', resizeCanvas);
 
 
-/* ─── 2. CHARACTER COUNTER ───────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════
+   2. DOM REFERENCES
+   ═══════════════════════════════════════════════════════════════════ */
 
-inputText.addEventListener('input', function() {
-    const count = this.value.length;
-    charCount.textContent = count.toLocaleString() + ' characters';
-    btnHumanize.disabled = count === 0;
+const inputText   = document.getElementById('input-text');
+const outputArea  = document.getElementById('output-area');
+const inputMeta   = document.getElementById('input-meta');
+const outputMeta  = document.getElementById('output-meta');
+const btnRewrite  = document.getElementById('btn-rewrite');
+const btnCopy     = document.getElementById('btn-copy');
+const toast       = document.getElementById('toast');
+const toggleDeep  = document.getElementById('toggle-deep');
+const modeQuick   = document.getElementById('mode-quick');
+const modeDeep    = document.getElementById('mode-deep');
+const resultStats = document.getElementById('result-stats');
+document.querySelector('.btn-text').textContent = 'Quick Fix';
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   3. CHARACTER COUNTERS — both panels
+   ═══════════════════════════════════════════════════════════════════ */
+
+inputText.addEventListener('input', function () {
+    const len = this.value.length;
+    const words = this.value.trim() ? this.value.trim().split(/\s+/).length : 0;
+    inputMeta.textContent = words > 0 ? `${words.toLocaleString()} words · ${len.toLocaleString()} chars` : '0';
+    btnRewrite.disabled = len === 0;
 });
 
+/**
+ * Update the output character/word count.
+ * Called after result is displayed.
+ */
+function updateOutputMeta(text) {
+    const len = text.length;
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    outputMeta.textContent = `${words.toLocaleString()} words · ${len.toLocaleString()} chars`;
+}
 
-/* ─── 3. TOGGLE SWITCH BEHAVIOR ──────────────────────────────────────────── 
 
-   When the toggle changes, update the label text so the user
-   knows which mode they're in.
-   
-   OFF = "Quick fix"    (rule-based only, instant, free)
-   ON  = "Deep rewrite" (LLM, 2-5 sec, costs ~$0.002)
-*/
+/* ═══════════════════════════════════════════════════════════════════
+   4. TOGGLE
+   ═══════════════════════════════════════════════════════════════════ */
 
-toggleDeep.addEventListener('change', function() {
+toggleDeep.addEventListener('change', function () {
     if (this.checked) {
-        toggleLabel.textContent = 'Deep rewrite';
-        toggleLabel.style.color = 'var(--accent)';
+        isPremium = true;
+        document.body.classList.add('premium');
+        modeQuick.classList.remove('active');
+        modeDeep.classList.add('active');
+        document.querySelector('.btn-text').textContent = 'Deep Rewrite';
     } else {
-        toggleLabel.textContent = 'Quick fix';
-        toggleLabel.style.color = 'var(--text-muted)';
+        isPremium = false;
+        document.body.classList.remove('premium');
+        modeQuick.classList.add('active');
+        modeDeep.classList.remove('active');
+        document.querySelector('.btn-text').textContent = 'Quick Fix';
+    }
+
+    /*
+     * If there's already a result, pulse the button to hint
+     * "press me again to rewrite with the new mode"
+     */
+    const hasResult = document.getElementById('output-text');
+    if (hasResult && !btnRewrite.disabled) {
+        btnRewrite.classList.add('pulse');
+        setTimeout(() => btnRewrite.classList.remove('pulse'), 800);
+    }
+});
+
+modeQuick.addEventListener('click', function () {
+    if (toggleDeep.checked) {
+        toggleDeep.checked = false;
+        toggleDeep.dispatchEvent(new Event('change'));
+    }
+});
+
+modeDeep.addEventListener('click', function () {
+    if (!toggleDeep.checked) {
+        toggleDeep.checked = true;
+        toggleDeep.dispatchEvent(new Event('change'));
     }
 });
 
 
-/* ─── 4. HUMANIZE BUTTON CLICK ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════
+   5. REWRITE BUTTON
+   ═══════════════════════════════════════════════════════════════════ */
 
-btnHumanize.addEventListener('click', async function() {
+btnRewrite.addEventListener('click', async function () {
     const text = inputText.value.trim();
     if (!text) return;
 
     showLoading();
 
     try {
-        const result = await humanizeText(text);
+        const result = await callAPI(text);
         showResult(result);
     } catch (error) {
-        console.error('Humanization failed:', error);
+        console.error('Rewrite failed:', error);
         showError(error.message);
     }
 });
 
 
-/* ─── 5. HUMANIZE FUNCTION — API CALL WITH TOGGLE ────────────────────────── 
+/* ═══════════════════════════════════════════════════════════════════
+   6. API CALL
+   ═══════════════════════════════════════════════════════════════════ */
 
-   Sends the user's text to /api/humanize/ along with the toggle state.
-
-   Inputs:  text (string) — the AI-generated text
-   Outputs: Promise<object> — { text, changes, stats, mode, warning? }
-   Throws:  Error if the request fails
-*/
-async function humanizeText(text) {
-    /*
-     * Read whether the Deep Rewrite toggle is ON or OFF.
-     * .checked is a boolean: true if ON, false if OFF.
-     */
+async function callAPI(text) {
     const deepRewrite = toggleDeep.checked;
 
     const response = await fetch('/api/humanize/', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            text: text,
-            deep_rewrite: deepRewrite,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, deep_rewrite: deepRewrite }),
     });
 
     const data = await response.json();
-
-    if (!response.ok) {
-        throw new Error(data.error || 'Something went wrong');
-    }
-
+    if (!response.ok) throw new Error(data.error || 'Something went wrong');
     return data;
 }
 
 
-/* ─── 6. UI STATE FUNCTIONS ──────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════
+   7. UI STATES
+   ═══════════════════════════════════════════════════════════════════ */
 
 function showLoading() {
-    btnHumanize.disabled = true;
-    btnHumanize.textContent = 'Humanizing...';
+    btnRewrite.disabled = true;
+    document.querySelector('.btn-text').textContent = 'Rewriting...';
     btnCopy.style.display = 'none';
+    outputMeta.textContent = '';
+    resultStats.style.display = 'none';
 
-    /*
-     * Show different loading message based on toggle state.
-     * Deep rewrite takes longer, so we set user expectations.
-     */
+    /* Remove previous changes report */
+    const existing = document.querySelector('.changes-report');
+    if (existing) existing.remove();
+
     const message = toggleDeep.checked
-        ? 'Deep rewriting with AI... (this takes a few seconds)'
-        : 'Analyzing patterns...';
+        ? 'Deep rewriting with AI...'
+        : 'Applying pattern fixes...';
 
     outputArea.innerHTML = `
         <div class="loading-state">
-            <div class="loading-dots">
-                <span></span>
-                <span></span>
-                <span></span>
+            <div class="orbital-spinner">
+                <div class="ring"></div>
+                <div class="ring"></div>
+                <div class="ring"></div>
+                <div class="core"></div>
             </div>
             <p>${message}</p>
+            <div class="loading-bar">
+                <div class="loading-bar-fill"></div>
+            </div>
         </div>
     `;
 }
 
-/**
- * Shows the humanized result text, stats, changes, and any warnings.
- *
- * @param {object} result — { text, changes, stats, mode, warning? }
- */
 function showResult(result) {
-    btnHumanize.disabled = false;
-    btnHumanize.innerHTML = '✦ Humanize';
+    btnRewrite.disabled = false;
+    document.querySelector('.btn-text').textContent = toggleDeep.checked ? 'Deep Rewrite' : 'Quick Fix';
 
-    /* Build the output HTML */
-    let html = `<div id="output-text">${escapeHtml(result.text)}</div>`;
+    /* Output text */
+    outputArea.innerHTML = `<div id="output-text">${escapeHtml(result.text)}</div>`;
 
-    /* Show warning if LLM failed and we fell back to rule-based */
     if (result.warning) {
-        html += `
-            <div class="warning-bar">
-                ⚠️ ${escapeHtml(result.warning)}
-            </div>
-        `;
+        outputArea.innerHTML += `<div class="warning-bar">${escapeHtml(result.warning)}</div>`;
     }
 
-    /* Stats bar */
-    html += `
-        <div class="stats-bar" style="display: flex;">
-            <div class="stat">
-                <span class="stat-label">Words</span>
-                <span class="stat-value">${result.stats.original_words} → ${result.stats.final_words}</span>
-            </div>
-            <div class="stat">
-                <span class="stat-label">Patterns found</span>
-                <span class="stat-value">${result.stats.patterns_found}</span>
-            </div>
-            <div class="stat">
-                <span class="stat-label">Mode</span>
-                <span class="stat-value">${result.mode}</span>
-            </div>
-        </div>
+    /* Update output word count */
+    updateOutputMeta(result.text);
+
+    /* Show inline stats */
+    const origWords = result.stats.original_words;
+    const finalWords = result.stats.final_words;
+    const patternsFound = result.stats.patterns_found;
+
+    resultStats.innerHTML = `
+        <span>${origWords}</span> → <span>${finalWords}</span> words
+        <span class="stat-dot">·</span>
+        <span>${patternsFound}</span> patterns
     `;
+    resultStats.style.display = 'block';
 
-    /* Changes report */
+    /* Collapsible changes report */
     if (result.changes && result.changes.length > 0) {
-        html += buildChangesReport(result.changes);
+        const reportEl = buildChangesReport(result.changes);
+        const panelOutput = document.getElementById('panel-output');
+        panelOutput.appendChild(reportEl);
     }
 
-    outputArea.innerHTML = html;
-    btnCopy.style.display = 'inline-flex';
+    btnCopy.style.display = 'flex';
 }
 
 function showError(message) {
-    btnHumanize.disabled = false;
-    btnHumanize.innerHTML = '✦ Humanize';
+    btnRewrite.disabled = false;
+    document.querySelector('.btn-text').textContent = toggleDeep.checked ? 'Deep Rewrite' : 'Quick Fix';
+    resultStats.style.display = 'none';
 
     outputArea.innerHTML = `
-        <div class="output-placeholder" style="color: var(--error);">
-            <div class="output-placeholder-icon">⚠️</div>
+        <div class="output-placeholder" style="color: #dc2626;">
+            <div class="placeholder-orb">
+                <span style="background:#dc2626;"></span>
+                <span style="background:#dc2626;"></span>
+                <span style="background:#dc2626;"></span>
+            </div>
             <p>${escapeHtml(message)}</p>
         </div>
     `;
 }
 
 
-/* ─── 7. CHANGES REPORT ─────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════
+   8. CHANGES REPORT — COLLAPSIBLE
+   ═══════════════════════════════════════════════════════════════════ */
 
 function buildChangesReport(changes) {
+    const existing = document.querySelector('.changes-report');
+    if (existing) existing.remove();
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'changes-report';
+
     let items = '';
     for (const change of changes) {
         items += `
@@ -221,12 +350,19 @@ function buildChangesReport(changes) {
         `;
     }
 
-    return `
-        <div class="changes-report">
-            <div class="changes-header">Changes made (rule-based pre-processing)</div>
-            ${items}
+    wrapper.innerHTML = `
+        <div class="changes-toggle">
+            <span class="changes-toggle-text">${changes.length} patterns detected</span>
+            <span class="changes-toggle-arrow">▾</span>
         </div>
+        <div class="changes-list">${items}</div>
     `;
+
+    wrapper.querySelector('.changes-toggle').addEventListener('click', function () {
+        wrapper.classList.toggle('open');
+    });
+
+    return wrapper;
 }
 
 function escapeHtml(text) {
@@ -236,27 +372,49 @@ function escapeHtml(text) {
 }
 
 
-/* ─── 8. COPY BUTTON ─────────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════
+   9. COPY — ICON SWAP TO CHECKMARK
+   ═══════════════════════════════════════════════════════════════════ */
 
-btnCopy.addEventListener('click', async function() {
+const ICON_COPY = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+</svg>`;
+
+const ICON_CHECK = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="20 6 9 17 4 12"/>
+</svg>`;
+
+btnCopy.addEventListener('click', async function () {
     const outputText = document.getElementById('output-text');
     if (!outputText) return;
 
     try {
         await navigator.clipboard.writeText(outputText.textContent);
-        showToast('Copied to clipboard!');
+
+        btnCopy.innerHTML = ICON_CHECK;
+        btnCopy.classList.add('copied');
+
+        setTimeout(() => {
+            btnCopy.innerHTML = ICON_COPY;
+            btnCopy.classList.remove('copied');
+        }, 1500);
+
+        showToast('Copied to clipboard');
     } catch (error) {
-        showToast('Could not copy. Please select and copy manually.');
+        showToast('Could not copy — select manually');
     }
 });
 
 
-/* ─── 9. TOAST NOTIFICATION ──────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════
+   10. TOAST
+   ═══════════════════════════════════════════════════════════════════ */
 
 function showToast(message) {
     toast.textContent = message;
     toast.classList.add('show');
-    setTimeout(() => {
-        toast.classList.remove('show');
-    }, 2500);
+    setTimeout(() => toast.classList.remove('show'), 2500);
 }

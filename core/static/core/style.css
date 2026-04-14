@@ -1,573 +1,804 @@
 /*
-    style.css
-    ---------
-    All styles for the Humanizer app.
-
-    We use CSS custom properties (variables) at the top so that
-    changing one value updates the color/spacing everywhere.
-    This makes theming and future changes very easy.
+    style.css — Rewright Design System
+    
+    Light  → warm, editorial, subtle solar system
+    Premium → dark, aurora glow, 3D panel tilt
 */
 
 
-/* ─── CSS VARIABLES (Design Tokens) ─────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════════
+   LIGHT THEME
+   ═══════════════════════════════════════════════════════════════════ */
 
-   These are like constants in Python. Define once, use everywhere.
-   Change --accent here and every button, badge, and highlight updates.
-*/
 :root {
-    --bg:           #f0f2f5;       /* page background */
-    --surface:      #ffffff;       /* card/panel background */
-    --border:       #e2e8f0;       /* border color */
-    --text-primary: #0f172a;       /* main text */
-    --text-muted:   #64748b;       /* secondary text */
-    --accent:       #6366f1;       /* indigo - our brand color */
-    --accent-hover: #4f46e5;       /* darker indigo on hover */
-    --accent-light: #eef2ff;       /* very light indigo for backgrounds */
-    --success:      #10b981;       /* green for success states */
-    --error:        #ef4444;       /* red for error states */
-    --radius:       12px;          /* standard border radius */
-    --shadow:       0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+    --bg:              #f5f3ee;
+    --bg-secondary:    #eae7e0;
+    --surface:         #ffffff;
+    --border:          #e0dcd4;
+    --border-focus:    #ccc7bc;
+
+    --text-primary:    #1a1714;
+    --text-secondary:  #6b655c;
+    --text-tertiary:   #a09888;
+
+    --accent:          #c2660a;
+    --accent-hover:    #a3540a;
+    --accent-soft:     rgba(194, 102, 10, 0.08);
+    --accent-glow:     rgba(194, 102, 10, 0);
+
+    --shadow:          0 1px 3px rgba(0,0,0,0.04), 0 4px 20px rgba(0,0,0,0.03);
+    --shadow-hover:    0 8px 40px rgba(0,0,0,0.08);
+
+    --radius:          14px;
+    --aurora-opacity:  0;
+    --grain-opacity:   0.015;
+
+    --panel-input-transform:  perspective(1200px) rotateY(0deg);
+    --panel-output-transform: perspective(1200px) rotateY(0deg);
+
+    --font-body:       'DM Sans', -apple-system, sans-serif;
+    --font-display:    'Playfair Display', Georgia, serif;
 }
 
 
-/* ─── RESET & BASE ───────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════════
+   PREMIUM (DARK) THEME
+   ═══════════════════════════════════════════════════════════════════ */
 
-   Remove browser default styles so we start clean on all browsers.
-*/
-*, *::before, *::after {
-    box-sizing: border-box;  /* padding is included in width calculation */
-    margin: 0;
-    padding: 0;
+body.premium {
+    --bg:              #0a0908;
+    --bg-secondary:    #151210;
+    --surface:         #1a1714;
+    --border:          #2a2520;
+    --border-focus:    #3d3630;
+
+    --text-primary:    #f5f3ee;
+    --text-secondary:  #a09888;
+    --text-tertiary:   #6b655c;
+
+    --accent:          #f0a030;
+    --accent-hover:    #f5b84d;
+    --accent-soft:     rgba(240, 160, 48, 0.1);
+    --accent-glow:     rgba(240, 160, 48, 0.25);
+
+    --shadow:          0 2px 8px rgba(0,0,0,0.3), 0 4px 20px rgba(0,0,0,0.2);
+    --shadow-hover:    0 8px 40px rgba(0,0,0,0.5), 0 0 60px rgba(240,160,48,0.05);
+
+    --aurora-opacity:  1;
+    --grain-opacity:   0.03;
+
+    --panel-input-transform:  perspective(1200px) rotateY(0deg);
+    --panel-output-transform: perspective(1200px) rotateY(0deg);
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   RESET
+   ═══════════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter',
-                 Roboto, sans-serif;
-    background-color: var(--bg);
+    font-family: var(--font-body);
+    background: var(--bg);
     color: var(--text-primary);
     min-height: 100vh;
-    /* Makes the page a vertical flex container so header+main fill the viewport */
     display: flex;
     flex-direction: column;
+    overflow-x: hidden;
+    transition: background 0.8s cubic-bezier(0.4, 0, 0.2, 1), color 0.6s ease;
 }
 
 
-/* ─── HEADER ─────────────────────────────────────────────────────────────────*/
+/* ═══════════════════════════════════════════════════════════════════
+   BACKGROUNDS
+   ═══════════════════════════════════════════════════════════════════ */
+
+#solar-system {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none; z-index: 0;
+}
+
+.bg-aurora {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none; z-index: 0;
+    opacity: var(--aurora-opacity);
+    transition: opacity 1s ease;
+    background:
+        radial-gradient(ellipse 80% 50% at 20% 40%, rgba(240,160,48,0.07), transparent),
+        radial-gradient(ellipse 60% 60% at 80% 30%, rgba(194,102,10,0.05), transparent),
+        radial-gradient(ellipse 70% 40% at 50% 80%, rgba(180,80,0,0.04), transparent);
+    animation: auroraDrift 15s ease-in-out infinite alternate;
+}
+
+@keyframes auroraDrift {
+    0%   { transform: scale(1) translate(0, 0); }
+    33%  { transform: scale(1.05) translate(15px, -10px); }
+    66%  { transform: scale(0.98) translate(-10px, 15px); }
+    100% { transform: scale(1.02) translate(5px, -5px); }
+}
+
+.bg-grain {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none; z-index: 9998;
+    opacity: var(--grain-opacity);
+    transition: opacity 0.8s ease;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 256px 256px;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   HEADER
+   ═══════════════════════════════════════════════════════════════════ */
 
 header {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 0 2rem;
+    padding: 0 2.5rem;
     height: 60px;
-    /* Horizontal flex: logo on left, nav on right */
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    /* Header stays at the top even when page scrolls */
-    position: sticky;
-    top: 0;
-    z-index: 100;
+    position: relative; z-index: 10;
 }
 
 .logo {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 700;
-    font-size: 1.1rem;
-    color: var(--text-primary);
+    display: flex; align-items: center; gap: 0.5rem;
     text-decoration: none;
+    color: var(--text-primary);
+    transition: color 0.6s ease;
 }
 
-/* The coloured dot next to the logo text */
-.logo-dot {
-    width: 10px;
-    height: 10px;
-    background: var(--accent);
-    border-radius: 50%;
-    /* Subtle pulse animation to show the app is live */
-    animation: pulse 2s infinite;
+.logo-mark svg { display: block; transition: filter 0.6s ease; }
+body.premium .logo-mark svg { filter: drop-shadow(0 0 8px var(--accent-glow)); }
+
+.logo-electron {
+    transform-origin: 12px 12px;
+    animation: orbit 4s linear infinite;
 }
 
-@keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50%       { opacity: 0.6; transform: scale(1.2); }
+@keyframes orbit {
+    from { transform: rotate(0deg) translateX(8px) rotate(0deg); }
+    to   { transform: rotate(360deg) translateX(8px) rotate(-360deg); }
 }
 
-.header-badge {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    background: var(--bg);
-    padding: 0.3rem 0.75rem;
-    border-radius: 999px;
-    border: 1px solid var(--border);
-}
+.logo-text { font-weight: 700; font-size: 1rem; letter-spacing: -0.02em; }
 
 
-/* ─── MAIN LAYOUT ────────────────────────────────────────────────────────────*/
+/* ═══════════════════════════════════════════════════════════════════
+   HERO
+   ═══════════════════════════════════════════════════════════════════ */
 
 main {
-    flex: 1;              /* fills remaining vertical space */
-    padding: 2rem;
-    max-width: 1400px;
+    flex: 1;
+    padding: 0.5rem 2.5rem 3rem;
+    max-width: 1320px;
     width: 100%;
-    margin: 0 auto;       /* centers the content horizontally */
+    margin: 0 auto;
+    position: relative; z-index: 1;
 }
 
-/* Hero section above the panels */
-.hero {
-    text-align: center;
-    margin-bottom: 2rem;
+.hero { text-align: center; margin-bottom: 1.75rem; }
+
+.hero-eyebrow {
+    display: inline-block;
+    font-size: 0.7rem; font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.75rem;
+    padding: 0.3rem 0.9rem;
+    border: 1px solid var(--accent-soft);
+    border-radius: 999px;
+    background: var(--accent-soft);
+    transition: all 0.6s ease;
+}
+
+body.premium .hero-eyebrow {
+    border-color: rgba(240,160,48,0.2);
+    box-shadow: 0 0 20px rgba(240,160,48,0.08);
 }
 
 .hero h1 {
-    font-size: 2rem;
-    font-weight: 800;
+    font-family: var(--font-display);
+    font-size: 3rem; font-weight: 400;
     color: var(--text-primary);
-    margin-bottom: 0.5rem;
+    line-height: 1.15;
     letter-spacing: -0.02em;
+    margin-bottom: 0.6rem;
+    transition: color 0.6s ease;
 }
 
-/* The colored word in the heading */
-.hero h1 span {
+.hero h1 em {
+    font-style: italic;
+    color: var(--accent);
+    transition: color 0.6s ease, text-shadow 0.6s ease;
+}
+
+body.premium .hero h1 em { text-shadow: 0 0 40px var(--accent-glow); }
+
+.hero p {
+    color: var(--text-secondary);
+    font-size: 1rem; line-height: 1.6;
+    transition: color 0.6s ease;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   MODE TOGGLE
+   ═══════════════════════════════════════════════════════════════════ */
+
+.mode-bar {
+    display: flex; align-items: center; justify-content: center;
+    gap: 1rem; margin-bottom: 1.75rem;
+}
+
+.mode-btn {
+    display: flex; align-items: center; gap: 0.35rem;
+    font-family: var(--font-body);
+    font-size: 0.78rem; font-weight: 500;
+    color: var(--text-tertiary);
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 0.4rem 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    user-select: none;
+}
+
+.mode-btn.active {
+    color: var(--text-primary);
+    background: var(--accent-soft);
+    border-color: var(--border);
+}
+
+.mode-btn-icon { font-size: 0.85rem; }
+
+.toggle-switch {
+    position: relative; display: inline-block;
+    width: 52px; height: 28px; cursor: pointer;
+}
+
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+
+.toggle-track {
+    position: absolute; inset: 0;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.toggle-glow {
+    position: absolute; inset: -2px;
+    border-radius: 999px;
+    background: radial-gradient(circle at 70% 50%, var(--accent-glow), transparent 70%);
+    opacity: 0; transition: opacity 0.6s ease;
+}
+
+.toggle-switch input:checked ~ .toggle-track .toggle-glow { opacity: 1; }
+
+.toggle-knob {
+    position: absolute; top: 3px; left: 3px;
+    width: 20px; height: 20px;
+    background: white; border-radius: 50%;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 2;
+}
+
+.knob-icon {
+    font-size: 0.55rem; opacity: 0;
+    transform: rotate(-90deg) scale(0.5);
+    transition: all 0.4s ease;
     color: var(--accent);
 }
 
-.hero p {
-    color: var(--text-muted);
-    font-size: 1rem;
-    max-width: 480px;
-    margin: 0 auto;
-    line-height: 1.6;
+.toggle-switch input:checked ~ .toggle-track {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 24px var(--accent-glow);
+}
+
+.toggle-switch input:checked ~ .toggle-track .toggle-knob {
+    transform: translateX(24px);
+    box-shadow: 0 0 12px var(--accent-glow), 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.toggle-switch input:checked ~ .toggle-track .toggle-knob .knob-icon {
+    opacity: 1; transform: rotate(0deg) scale(1);
 }
 
 
-/* ─── TWO PANEL LAYOUT ───────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════════
+   PANELS — CLEAN, SYNCED, NO FOOTERS
 
-   The main editor area is split into two panels side by side:
-   Left panel  = input (paste your AI text here)
-   Right panel = output (see the humanized result here)
-*/
+   Both panels: header + body. That's it.
+   Grid with align-items: stretch makes them identical height.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.panels-wrapper { perspective: 1200px; }
+
 .panels {
     display: grid;
-    /* Two equal columns with a gap between them */
     grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-    align-items: start;
+    gap: 1.25rem;
+    align-items: stretch;
 }
 
-/* Each panel is a white card */
 .panel {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     overflow: hidden;
-    /* Smooth border color change when panel is active */
-    transition: border-color 0.2s;
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-style: preserve-3d;
+    will-change: transform;
+    display: flex;
+    flex-direction: column;
 }
 
-.panel:focus-within {
-    border-color: var(--accent);
+#panel-input  { transform: var(--panel-input-transform); }
+#panel-input .panel-body { overflow: hidden; }
+#panel-output { transform: var(--panel-output-transform); }
+
+.panel:hover { box-shadow: var(--shadow-hover); }
+
+body.premium .panel {
+    border-color: var(--border-focus);
+    box-shadow: var(--shadow), 0 0 80px rgba(240,160,48,0.02);
 }
 
-/* Top bar of each panel with the label and action buttons */
+/* ─── Panel header ─── */
 .panel-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.875rem 1.25rem;
+    padding: 0.65rem 1.15rem;
     border-bottom: 1px solid var(--border);
-    background: #fafafa;
+    min-height: 40px;
+    transition: all 0.6s ease;
 }
 
 .panel-label {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--text-muted);
+    font-size: 0.68rem; font-weight: 600;
+    color: var(--text-secondary);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.07em;
+    transition: color 0.6s ease;
 }
 
-/* Small action buttons inside panel headers (like Copy) */
-.panel-action {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 0.3rem 0.7rem;
-    cursor: pointer;
-    transition: all 0.15s;
+.panel-meta {
+    font-size: 0.68rem;
+    color: var(--text-tertiary);
+    font-variant-numeric: tabular-nums;
+    transition: color 0.6s ease;
 }
 
-.panel-action:hover {
-    background: var(--bg);
-    color: var(--text-primary);
-}
-
-/* The textarea where user pastes their text */
-#input-text {
-    width: 100%;
-    min-height: 360px;
-    padding: 1.25rem;
-    border: none;             /* panel border handles the border */
-    outline: none;            /* remove browser default focus ring */
-    resize: vertical;         /* user can drag to make it taller */
-    font-size: 0.95rem;
-    line-height: 1.7;
-    color: var(--text-primary);
-    font-family: inherit;
-    background: var(--surface);
-}
-
-#input-text::placeholder {
-    color: #a0aec0;
-}
-
-/* The output div that shows the result */
-#output-text {
-    min-height: 360px;
-    padding: 1.25rem;
-    font-size: 0.95rem;
-    line-height: 1.7;
-    color: var(--text-primary);
-    /* Allows long words to wrap instead of overflow */
-    word-break: break-word;
-    white-space: pre-wrap;     /* respects newlines in the output */
-}
-
-/* Placeholder shown before the user clicks Humanize */
-.output-placeholder {
-    height: 360px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-    color: var(--text-muted);
-}
-
-.output-placeholder-icon {
-    font-size: 2.5rem;
-    opacity: 0.3;
-}
-
-.output-placeholder p {
-    font-size: 0.9rem;
-    text-align: center;
-    max-width: 200px;
-}
-
-
-/* ─── BOTTOM BAR (CHARACTER COUNT + HUMANIZE BUTTON) ────────────────────────*/
-
-.panel-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.875rem 1.25rem;
-    border-top: 1px solid var(--border);
-    background: #fafafa;
-}
-
-.char-count {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-}
-
-/* The main Humanize button */
-.btn-humanize {
-    background: var(--accent);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 0.6rem 1.5rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-    /* Smooth color transition on hover */
-    transition: background 0.15s, transform 0.1s;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.btn-humanize:hover:not(:disabled) {
-    background: var(--accent-hover);
-    transform: translateY(-1px);  /* subtle lift effect */
-}
-
-.btn-humanize:active:not(:disabled) {
-    transform: translateY(0);     /* press back down on click */
-}
-
-.btn-humanize:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-
-/* ─── LOADING STATE ──────────────────────────────────────────────────────────*/
-
-/* Shown inside the output panel while API is processing */
-.loading-state {
-    height: 360px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    color: var(--text-muted);
-}
-
-/* Three bouncing dots */
-.loading-dots {
-    display: flex;
-    gap: 0.4rem;
-}
-
-.loading-dots span {
-    width: 8px;
-    height: 8px;
-    background: var(--accent);
-    border-radius: 50%;
-    animation: bounce 1.2s infinite;
-}
-
-/* Each dot starts its bounce at a different time */
-.loading-dots span:nth-child(2) { animation-delay: 0.2s; }
-.loading-dots span:nth-child(3) { animation-delay: 0.4s; }
-
-@keyframes bounce {
-    0%, 80%, 100% { transform: translateY(0); }
-    40%           { transform: translateY(-10px); }
-}
-
-.loading-state p {
-    font-size: 0.875rem;
-}
-
-
-/* ─── STATS BAR ──────────────────────────────────────────────────────────────
-
-   Shown after humanization is complete.
-   Displays word count before/after and patterns changed.
-*/
-.stats-bar {
-    display: flex;
-    gap: 1.5rem;
-    padding: 0.875rem 1.25rem;
-    border-top: 1px solid var(--border);
-    background: var(--accent-light);
-    /* Hidden by default, shown after successful humanization */
-    display: none;
-}
-
-.stat {
-    display: flex;
-    flex-direction: column;
-    gap: 0.1rem;
-}
-
-.stat-label {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-muted);
-    font-weight: 600;
-}
-
-.stat-value {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--accent);
-}
-
-
-/* ─── TOAST NOTIFICATION ─────────────────────────────────────────────────────
-
-   Small popup in the bottom right to confirm actions like "Copied!"
-*/
-.toast {
-    position: fixed;
-    bottom: 2rem;
-    right: 2rem;
-    background: var(--text-primary);
-    color: white;
-    padding: 0.75rem 1.25rem;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    font-weight: 500;
-    /* Hidden by default */
-    opacity: 0;
-    transform: translateY(10px);
-    transition: all 0.25s;
-    pointer-events: none;   /* doesn't block clicks when invisible */
-    z-index: 999;
-}
-
-.toast.show {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-
-/* ─── RESPONSIVE: STACK ON MOBILE ────────────────────────────────────────────
-
-   On small screens (phone), switch from 2 columns to 1 column (stacked).
-*/
-@media (max-width: 768px) {
-    main { padding: 1rem; }
-    .hero h1 { font-size: 1.5rem; }
-
-    /* Switch to single column on mobile */
-    .panels { grid-template-columns: 1fr; }
-}
-
-/* ─── CHANGES REPORT ─────────────────────────────────────────────────────────
-
-   Shows what patterns were detected and changed.
-   Appears below the humanized text in the output panel.
-*/
-.changes-report {
-    border-top: 1px solid var(--border);
-    padding: 1rem 1.25rem;
-    background: #fafbfc;
-}
-
-.changes-header {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: 0.75rem;
-}
-
-.change-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid var(--border);
-}
-
-.change-item:last-child {
-    border-bottom: none;
-}
-
-/* The pattern number badge (P7, P23, etc.) */
-.change-badge {
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: var(--accent);
-    background: var(--accent-light);
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-    white-space: nowrap;
-    margin-top: 0.1rem;
-}
-
-.change-content {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-}
-
-.change-content strong {
-    font-size: 0.85rem;
-    color: var(--text-primary);
-}
-
-.change-detail {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    line-height: 1.5;
-}
-
-/* ─── TOGGLE SWITCH ──────────────────────────────────────────────────────────
-
-   A custom on/off toggle for switching between Quick Fix and Deep Rewrite.
-   The toggle is built with a hidden checkbox + a styled label.
-*/
-
-.toggle-wrapper {
+/* Right side of output header: meta + copy icon */
+.panel-header-right {
     display: flex;
     align-items: center;
     gap: 0.6rem;
 }
 
-.toggle-label {
-    font-size: 0.78rem;
-    font-weight: 500;
-    color: var(--text-muted);
-    transition: color 0.2s;
-    min-width: 80px;        /* prevents layout shift when text changes */
-    text-align: right;
+/* ─── Panel body — fills remaining space ─── */
+.panel-body {
+    flex: 1;
+    height: 420px;
+    min-height: 420px;
+    max-height: 420px;
+    overflow-y: auto;
 }
 
-/* The outer track of the toggle */
-.toggle-switch {
+.panel-body::-webkit-scrollbar { width: 5px; }
+.panel-body::-webkit-scrollbar-track { background: transparent; }
+.panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+.panel-body::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+/* Textarea fills body completely — no gap */
+#input-text {
+    width: 100%;
+    height: 100%;
+    padding: 1.15rem;
+    border: none; outline: none; resize: none;
+    font-size: 0.9rem; line-height: 1.8;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    background: transparent;
+    transition: color 0.6s ease;
+}
+
+#input-text::placeholder { color: var(--text-tertiary); }
+/* Match textarea scrollbar to panel-body scrollbar */
+#input-text::-webkit-scrollbar { width: 5px; }
+#input-text::-webkit-scrollbar-track { background: transparent; }
+#input-text::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+#input-text::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+/* Output area fills body */
+#output-area { height: 100%; }
+
+#output-text {
+    padding: 1.15rem;
+    font-size: 0.9rem; line-height: 1.8;
+    color: var(--text-primary);
+    word-break: break-word;
+    white-space: pre-wrap;
+    transition: color 0.6s ease;
+}
+
+/* Placeholder */
+.output-placeholder {
+    height: 420px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    color: var(--text-tertiary);
+}
+
+.placeholder-orb {
     position: relative;
-    display: inline-block;
-    width: 40px;
-    height: 22px;
-    cursor: pointer;
+    width: 48px; height: 48px;
 }
 
-/* Hide the real checkbox — we style our own */
-.toggle-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-/* The visible track (background bar) */
-.toggle-slider {
+.placeholder-orb span {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: var(--border);
-    border-radius: 999px;
-    transition: background 0.25s;
-}
-
-/* The circular knob that slides */
-.toggle-slider::before {
-    content: '';
-    position: absolute;
-    height: 16px;
-    width: 16px;
-    left: 3px;
-    bottom: 3px;
-    background: white;
     border-radius: 50%;
-    transition: transform 0.25s;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-}
-
-/* When checked (ON state): track turns accent color */
-.toggle-switch input:checked + .toggle-slider {
     background: var(--accent);
+    opacity: 0.12;
+    animation: orbFloat 3s ease-in-out infinite;
 }
 
-/* When checked: knob slides to the right */
-.toggle-switch input:checked + .toggle-slider::before {
-    transform: translateX(18px);
+.placeholder-orb span:nth-child(1) { width: 10px; height: 10px; top: 8px; left: 4px; }
+.placeholder-orb span:nth-child(2) { width: 14px; height: 14px; top: 16px; left: 20px; animation-delay: 0.5s; }
+.placeholder-orb span:nth-child(3) { width: 8px; height: 8px; top: 28px; left: 10px; animation-delay: 1s; }
+
+@keyframes orbFloat {
+    0%, 100% { transform: translateY(0); opacity: 0.12; }
+    50%      { transform: translateY(-6px); opacity: 0.25; }
 }
 
-/* ─── WARNING BAR ────────────────────────────────────────────────────────────
+.output-placeholder p {
+    font-size: 0.82rem; text-align: center; line-height: 1.5;
+}
 
-   Shown when LLM fails and we fall back to rule-based result.
-*/
+
+/* ═══════════════════════════════════════════════════════════════════
+   COPY BUTTON — ICON ONLY
+   ═══════════════════════════════════════════════════════════════════ */
+
+.btn-copy {
+    display: flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+}
+
+.btn-copy:hover {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.btn-copy.copied {
+    color: #16a34a;
+    border-color: #16a34a;
+    background: rgba(22,163,74,0.08);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   ACTION BAR — REWRITE BUTTON (SEPARATED FROM PANELS)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.action-bar {
+    display: flex;
+    justify-content: center;
+    padding: 1.25rem 0 0;
+}
+
+.btn-rewrite {
+    position: relative;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 0.7rem 2.2rem;
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    z-index: 1;
+}
+
+.btn-shine {
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+    transition: left 0.5s ease;
+    z-index: 0;
+}
+
+.btn-rewrite:hover:not(:disabled) .btn-shine { left: 100%; }
+
+.btn-rewrite:hover:not(:disabled) {
+    background: var(--accent-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(194,102,10,0.25);
+}
+
+body.premium .btn-rewrite {
+    box-shadow: 0 0 28px var(--accent-glow);
+}
+
+body.premium .btn-rewrite:hover:not(:disabled) {
+    box-shadow: 0 0 40px var(--accent-glow), 0 8px 24px rgba(0,0,0,0.3);
+}
+
+.btn-rewrite:active:not(:disabled) { transform: translateY(0); }
+.btn-rewrite:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.btn-icon, .btn-text { position: relative; z-index: 1; }
+.btn-icon { font-size: 0.95rem; transition: transform 0.4s ease; }
+.btn-rewrite:hover:not(:disabled) .btn-icon { transform: rotate(72deg); }
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   RESULT STATS — SUBTLE INLINE
+   ═══════════════════════════════════════════════════════════════════ */
+
+.result-stats {
+    text-align: center;
+    padding: 0.6rem 0 0;
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    letter-spacing: 0.01em;
+    transition: color 0.6s ease;
+}
+
+.result-stats span {
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+/* Dot separator between stat items */
+.stat-dot {
+    display: inline-block;
+    margin: 0 0.5rem;
+    opacity: 0.4;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   LOADING — ORBITAL SPINNER
+   ═══════════════════════════════════════════════════════════════════ */
+
+.loading-state {
+    height: 420px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    color: var(--text-secondary);
+}
+
+.orbital-spinner {
+    position: relative;
+    width: 52px; height: 52px;
+}
+
+.orbital-spinner .ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 2px solid transparent;
+}
+
+.orbital-spinner .ring:nth-child(1) {
+    inset: 0;
+    border-top-color: var(--accent);
+    animation: spin 1.2s linear infinite;
+}
+
+.orbital-spinner .ring:nth-child(2) {
+    inset: 7px;
+    border-right-color: var(--accent);
+    opacity: 0.6;
+    animation: spin 1.8s linear infinite reverse;
+}
+
+.orbital-spinner .ring:nth-child(3) {
+    inset: 14px;
+    border-bottom-color: var(--accent);
+    opacity: 0.3;
+    animation: spin 2.4s linear infinite;
+}
+
+.orbital-spinner .core {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: corePulse 1.2s ease-in-out infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@keyframes corePulse {
+    0%, 100% { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+    50%      { opacity: 0.4; transform: translate(-50%,-50%) scale(0.6); }
+}
+
+.loading-state p { font-size: 0.8rem; letter-spacing: 0.02em; }
+
+.loading-bar {
+    width: 120px; height: 2px;
+    background: var(--border);
+    border-radius: 999px; overflow: hidden;
+}
+
+.loading-bar-fill {
+    width: 40%; height: 100%;
+    background: var(--accent);
+    border-radius: 999px;
+    animation: loadSlide 1.5s ease-in-out infinite;
+}
+
+@keyframes loadSlide {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(350%); }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   CHANGES REPORT — COLLAPSIBLE, BELOW OUTPUT PANEL
+   ═══════════════════════════════════════════════════════════════════ */
+
+.changes-report {
+    border-top: 1px solid var(--border);
+    transition: all 0.6s ease;
+}
+
+.changes-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1.15rem;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s ease;
+}
+
+.changes-toggle:hover { background: var(--accent-soft); }
+
+.changes-toggle-text {
+    font-size: 0.66rem; font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.changes-toggle-arrow {
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    transition: transform 0.3s ease;
+}
+
+.changes-report.open .changes-toggle-arrow { transform: rotate(180deg); }
+
+.changes-list {
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.changes-report.open .changes-list { max-height: 600px; overflow-y: auto; }
+
+.change-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    padding: 0.35rem 1.15rem;
+    border-top: 1px solid var(--border);
+}
+
+.change-badge {
+    font-size: 0.58rem; font-weight: 700;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    white-space: nowrap;
+    margin-top: 0.15rem;
+}
+
+.change-content { display: flex; flex-direction: column; gap: 0.05rem; min-width: 0; }
+.change-content strong { font-size: 0.72rem; font-weight: 600; color: var(--text-primary); }
+.change-detail { font-size: 0.68rem; color: var(--text-secondary); line-height: 1.4; word-break: break-word; }
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   WARNING / TOAST
+   ═══════════════════════════════════════════════════════════════════ */
+
 .warning-bar {
-    padding: 0.75rem 1.25rem;
-    background: #fef3c7;
-    color: #92400e;
-    font-size: 0.8rem;
-    border-top: 1px solid #fde68a;
+    padding: 0.6rem 1.15rem;
+    background: rgba(245,158,11,0.08);
+    color: var(--accent);
+    font-size: 0.72rem;
+    border-top: 1px solid rgba(245,158,11,0.15);
     line-height: 1.5;
+}
+
+.toast {
+    position: fixed;
+    bottom: 2rem; right: 2rem;
+    background: var(--text-primary);
+    color: var(--bg);
+    padding: 0.6rem 1.1rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    opacity: 0;
+    transform: translateY(8px) scale(0.95);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+    z-index: 9999;
+}
+
+.toast.show { opacity: 1; transform: translateY(0) scale(1); }
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 860px) {
+    main { padding: 0.5rem 1rem 2rem; }
+    header { padding: 0 1rem; }
+    .hero h1 { font-size: 2.2rem; }
+    .panels { grid-template-columns: 1fr; }
+    #panel-input, #panel-output { transform: none !important; }
+    .mode-bar { gap: 0.5rem; }
+    .mode-btn { padding: 0.35rem 0.6rem; font-size: 0.72rem; }
+}
+
+@media (max-width: 480px) {
+    .hero h1 { font-size: 1.75rem; }
+    .hero p { font-size: 0.88rem; }
+    .panel-body { height: 300px; min-height: 300px; max-height: 300px; }
+    .loading-state { height: 300px; }
+    .output-placeholder { height: 300px; }
+    .btn-rewrite { padding: 0.6rem 1.6rem; font-size: 0.85rem; }
+}
+
+/* Button pulse — draws attention when toggle changes */
+@keyframes btnPulse {
+    0%   { box-shadow: 0 0 0 0 var(--accent); }
+    50%  { box-shadow: 0 0 0 10px rgba(194,102,10,0); }
+    100% { box-shadow: 0 0 0 0 rgba(194,102,10,0); }
+}
+
+.btn-rewrite.pulse {
+    animation: btnPulse 0.8s ease-out;
 }
