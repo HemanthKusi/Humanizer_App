@@ -407,6 +407,10 @@ const INPUT_MIN_WORDS = 100;
 const INPUT_MIN_CHARS = 1000;
 const INPUT_MAX_WORDS = 500;
 const INPUT_MAX_CHARS = 5000;
+
+let lastRequestTime = 0;
+const REQUEST_COOLDOWN = 3000;  /* 3 seconds between requests */
+
 document.querySelector('.btn-text').textContent = 'Quick Fix';
 
 
@@ -624,6 +628,14 @@ btnRewrite.addEventListener('click', async function () {
     const text = inputText.value.trim();
     if (!text) return;
 
+    /* Prevent rapid clicking */
+    const now = Date.now();
+    if (now - lastRequestTime < REQUEST_COOLDOWN) {
+        showToast('Please wait a moment before trying again.');
+        return;
+    }
+    lastRequestTime = now;
+
     showLoading();
 
     try {
@@ -639,6 +651,27 @@ btnRewrite.addEventListener('click', async function () {
 /* ═══════════════════════════════════════════════════════════════════
    6. API CALL
    ═══════════════════════════════════════════════════════════════════ */
+
+   /**
+ * Get Django's CSRF token from cookies.
+ * Django sets a cookie called 'csrftoken' — we read it and send
+ * it back in the X-CSRFToken header with every POST request.
+ *
+ * @returns {string} The CSRF token value
+ */
+function getCSRFToken() {
+    /* Try cookie first */
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        cookie = cookie.trim();
+        if (cookie.startsWith('csrftoken=')) {
+            return cookie.substring('csrftoken='.length);
+        }
+    }
+    /* Fallback to meta tag */
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : '';
+}
 
 async function callAPI(text) {
     const deepRewrite = toggleDeep.checked;
@@ -667,7 +700,10 @@ async function callAPI(text) {
 
     const response = await fetch('/api/humanize/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken(),
+        },
         body: JSON.stringify({
             text,
             deep_rewrite: deepRewrite,

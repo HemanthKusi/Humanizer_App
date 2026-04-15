@@ -35,7 +35,7 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 # Which hostnames are allowed to serve this app.
 # In development, localhost is fine.
 # In production, you add your real domain here.
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 
 # ─── INSTALLED APPS ──────────────────────────────────────────────────────────
@@ -52,12 +52,39 @@ INSTALLED_APPS = [
     'core',                      # Our main app (we just created this)
 ]
 
+# ─── SECURITY HEADERS ───────────────────────────────────────────
+# These tell browsers to enforce security policies
+
+# Only send HTTPS in production
+SECURE_SSL_REDIRECT = not DEBUG
+
+# Prevent clickjacking — no one can embed your site in an iframe
+X_FRAME_OPTIONS = 'DENY'
+
+# Prevent MIME type sniffing
+SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# Enable browser XSS filter
+SECURE_BROWSER_XSS_FILTER = True
+
+# HSTS — tell browsers to always use HTTPS (production only)
+if not DEBUG:
+    SECURE_HSTS_SECONDS = 31536000        # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+# Cookie security
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_HTTPONLY = True
+
 
 # ─── MIDDLEWARE ───────────────────────────────────────────────────────────────
 
 # Middleware are functions that run on every request and response.
 # Think of them as a pipeline that every request passes through.
 MIDDLEWARE = [
+    'core.middleware.SimpleRateLimiter',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -66,6 +93,13 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# CSRF settings
+CSRF_COOKIE_SAMESITE = 'Strict'
+CSRF_COOKIE_HTTPONLY = False    # JS needs to read it
+
+# Limit request body size to 100KB (more than enough for 500 words)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 102400  # 100KB in bytes
 
 # The root URL configuration file.
 # Django starts here when routing requests.

@@ -19,7 +19,6 @@ import json
 from django.shortcuts import render
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
-from django.views.decorators.csrf import csrf_exempt
 
 from core.humanizer_engine import humanize_rule_based
 from core.llm_engine import humanize_with_llm
@@ -39,7 +38,6 @@ def index(request: HttpRequest) -> HttpResponse:
     return render(request, 'core/index.html', context)
 
 
-@csrf_exempt
 @require_POST
 def humanize(request: HttpRequest) -> JsonResponse:
     """
@@ -106,15 +104,20 @@ def humanize(request: HttpRequest) -> JsonResponse:
         try:
             llm_result = humanize_with_llm(text, voice_sample=voice_sample)
         except Exception as llm_error:
-            # If the LLM fails, return the rule-based result as fallback
-            # with a warning so the user knows the LLM part failed
+            # Log the real error server-side for debugging
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f'LLM call failed: {str(llm_error)}')
+
+            # Return a safe generic message to the user
+            # NEVER expose the raw error — it might contain API keys
             return JsonResponse({
                 'text': rule_result['text'],
                 'changes': rule_result['changes'],
                 'stats': rule_result['stats'],
-                'mode': 'rule-based (LLM failed)',
-                'warning': f'Deep rewrite failed: {str(llm_error)}. '
-                           f'Showing rule-based result instead.',
+                'mode': 'rule-based (LLM unavailable)',
+                'warning': 'Deep rewrite is temporarily unavailable. '
+                           'Showing rule-based result instead.',
             })
 
         # Compute final stats comparing original to LLM output
@@ -141,7 +144,11 @@ def humanize(request: HttpRequest) -> JsonResponse:
             status=400
         )
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f'Humanize endpoint error: {str(e)}')
+
         return JsonResponse(
-            {'error': f'Something went wrong: {str(e)}'},
+            {'error': 'Something went wrong. Please try again.'},
             status=500
         )
