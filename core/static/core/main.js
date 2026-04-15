@@ -15,99 +15,363 @@
    1. SOLAR SYSTEM BACKGROUND
    ═══════════════════════════════════════════════════════════════════ */
 
+/*
+    SOLAR SYSTEM — Realistic 3D planets with accurate size ratios
+
+    Real planet size ratios (Earth = 1.0):
+        Mercury: 0.38    Venus: 0.95     Earth: 1.0      Mars: 0.53
+        Jupiter: 11.2    Saturn: 9.45    Uranus: 4.0     Neptune: 3.88
+        Sun: 109.2
+
+    We use square-root compression so Jupiter/Saturn don't dominate
+    the screen while still looking proportionally correct.
+
+    3D effect is achieved with layered radial gradients:
+        1. Base sphere gradient (light side → dark side)
+        2. Atmosphere/rim glow
+        3. Specular highlight (small bright spot)
+        4. Shadow terminator (dark edge on the far side from sun)
+
+    Replace everything from the top of main.js to the DOM REFERENCES section.
+*/
+
 const canvas = document.getElementById('solar-system');
 const ctx = canvas.getContext('2d');
 let isPremium = false;
 let time = 0;
 
-const sun = { xRatio: 0.15, yRatio: 0.35 };
+/* ─── SIZE RATIOS (square-root compressed) ────────────────────────────
+   Earth = 1.0 base. We use sqrt() to compress the huge range
+   between Mercury and Jupiter into something visible on screen.
+   
+   Base pixel size = 3.5px (Earth's radius on screen)
+   Sun uses a separate larger scale.
+*/
+
+const BASE_SIZE = 6;
+
+function sizeOf(earthRatio) {
+    return Math.sqrt(earthRatio) * BASE_SIZE;
+}
+
+/* Sun position (proportional to canvas) */
+const sunPos = { xRatio: 0.12, yRatio: 0.32 };
+const SUN_RADIUS = 25;  /* Compressed — real ratio would be 109x Earth */
+
+/* ─── PLANET DATA ─────────────────────────────────────────────────────
+   Each planet has:
+     name        — for reference
+     sizeRatio   — real diameter ratio to Earth
+     orbitA/B    — semi-major/minor axes (proportion of canvas width/height)
+     speed       — orbital speed (radians per frame)
+     offset      — starting angle
+     colors      — { base, light, dark, atmosphere } for 3D rendering
+*/
 
 const planets = [
-    { orbitA: 0.08,  orbitB: 0.05, speed: 0.008,  size: 2.5, offset: 0,   color: [140,140,140] },  // Mercury — gray
-    { orbitA: 0.14,  orbitB: 0.08, speed: 0.005,  size: 4,   offset: 1.2, color: [232,205,160] },  // Venus — pale yellow
-    { orbitA: 0.22,  orbitB: 0.12, speed: 0.003,  size: 4.5, offset: 2.8, color: [75,125,201] },   // Earth — blue
-    { orbitA: 0.32,  orbitB: 0.17, speed: 0.002,  size: 3.5, offset: 0.7, color: [193,68,14] },    // Mars — red-orange
-    { orbitA: 0.42,  orbitB: 0.22, speed: 0.0012, size: 7,   offset: 4.1, color: [200,139,58] },   // Jupiter — orange-brown
-    { orbitA: 0.55,  orbitB: 0.28, speed: 0.0008, size: 6,   offset: 3.0, color: [228,209,145] },  // Saturn — golden
+    {
+        name: 'Mercury',
+        sizeRatio: 0.38,
+        orbitA: 0.07, orbitB: 0.045,
+        speed: 0.009, offset: 0.4,
+        colors: {
+            base: [169, 169, 169],     /* Gray */
+            light: [200, 200, 200],
+            dark: [80, 80, 80],
+            atmosphere: null
+        }
+    },
+    {
+        name: 'Venus',
+        sizeRatio: 0.95,
+        orbitA: 0.12, orbitB: 0.075,
+        speed: 0.006, offset: 2.1,
+        colors: {
+            base: [222, 184, 135],     /* Pale yellowish */
+            light: [245, 222, 179],
+            dark: [160, 120, 60],
+            atmosphere: [255, 240, 200, 0.15]
+        }
+    },
+    {
+        name: 'Earth',
+        sizeRatio: 1.0,
+        orbitA: 0.18, orbitB: 0.10,
+        speed: 0.004, offset: 4.2,
+        colors: {
+            base: [70, 130, 200],      /* Blue */
+            light: [100, 170, 240],
+            dark: [20, 50, 100],
+            atmosphere: [130, 200, 255, 0.12]
+        }
+    },
+    {
+        name: 'Mars',
+        sizeRatio: 0.53,
+        orbitA: 0.25, orbitB: 0.14,
+        speed: 0.003, offset: 1.0,
+        colors: {
+            base: [193, 68, 14],       /* Red-orange */
+            light: [220, 100, 50],
+            dark: [100, 30, 5],
+            atmosphere: null
+        }
+    },
+    {
+        name: 'Jupiter',
+        sizeRatio: 11.2,
+        orbitA: 0.38, orbitB: 0.20,
+        speed: 0.0015, offset: 3.5,
+        colors: {
+            base: [200, 139, 58],      /* Orange-brown */
+            light: [235, 190, 120],
+            dark: [120, 70, 20],
+            atmosphere: [255, 200, 130, 0.08]
+        }
+    },
+    {
+        name: 'Saturn',
+        sizeRatio: 9.45,
+        orbitA: 0.52, orbitB: 0.27,
+        speed: 0.001, offset: 5.8,
+        colors: {
+            base: [218, 195, 132],     /* Golden */
+            light: [245, 230, 180],
+            dark: [140, 120, 60],
+            atmosphere: [255, 230, 160, 0.06],
+            rings: true                /* Saturn gets rings */
+        }
+    },
 ];
+
 
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 }
 
+
+/* ─── 3D PLANET RENDERER ──────────────────────────────────────────────
+   Draws a single planet with realistic 3D shading.
+
+   The 3D effect uses multiple gradient layers:
+   1. Base sphere: radial gradient offset toward the sun (light source)
+      to create the illusion of a lit sphere
+   2. Shadow terminator: darker edge on the side away from the sun
+   3. Atmosphere glow: faint colored halo around planets that have one
+   4. Specular highlight: small bright dot where light hits directly
+*/
+
+function drawPlanet(px, py, radius, colors, sunX, sunY, alpha) {
+    if (radius < 0.5) return;  /* Skip if too tiny to see */
+
+    /* Direction from planet to sun (for lighting) */
+    const dx = sunX - px;
+    const dy = sunY - py;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const lightDirX = dx / dist;
+    const lightDirY = dy / dist;
+
+    /* Offset the gradient center toward the light source */
+    const highlightX = px + lightDirX * radius * 0.35;
+    const highlightY = py + lightDirY * radius * 0.35;
+
+    /* 1. Base sphere gradient */
+    const baseGrad = ctx.createRadialGradient(
+        highlightX, highlightY, radius * 0.05,
+        px, py, radius
+    );
+    baseGrad.addColorStop(0, `rgba(${colors.light[0]}, ${colors.light[1]}, ${colors.light[2]}, ${alpha})`);
+    baseGrad.addColorStop(0.5, `rgba(${colors.base[0]}, ${colors.base[1]}, ${colors.base[2]}, ${alpha})`);
+    baseGrad.addColorStop(1, `rgba(${colors.dark[0]}, ${colors.dark[1]}, ${colors.dark[2]}, ${alpha})`);
+
+    ctx.beginPath();
+    ctx.arc(px, py, radius, 0, Math.PI * 2);
+    ctx.fillStyle = baseGrad;
+    ctx.fill();
+
+    /* 2. Shadow terminator — extra dark on the far side from sun */
+    const shadowX = px - lightDirX * radius * 0.3;
+    const shadowY = py - lightDirY * radius * 0.3;
+    const shadowGrad = ctx.createRadialGradient(
+        shadowX, shadowY, radius * 0.5,
+        shadowX, shadowY, radius * 1.2
+    );
+    shadowGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    shadowGrad.addColorStop(1, `rgba(0, 0, 0, ${alpha * 0.4})`);
+
+    ctx.beginPath();
+    ctx.arc(px, py, radius, 0, Math.PI * 2);
+    ctx.fillStyle = shadowGrad;
+    ctx.fill();
+
+    /* 3. Specular highlight — tiny bright spot */
+    const specX = highlightX;
+    const specY = highlightY;
+    const specSize = radius * 0.25;
+    const specGrad = ctx.createRadialGradient(
+        specX, specY, 0,
+        specX, specY, specSize
+    );
+    specGrad.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.5})`);
+    specGrad.addColorStop(1, `rgba(255, 255, 255, 0)`);
+
+    ctx.beginPath();
+    ctx.arc(specX, specY, specSize, 0, Math.PI * 2);
+    ctx.fillStyle = specGrad;
+    ctx.fill();
+
+    /* 4. Atmosphere glow (if planet has one) */
+    if (colors.atmosphere) {
+        const atm = colors.atmosphere;
+        const atmGrad = ctx.createRadialGradient(
+            px, py, radius * 0.85,
+            px, py, radius * 1.4
+        );
+        atmGrad.addColorStop(0, `rgba(${atm[0]}, ${atm[1]}, ${atm[2]}, ${atm[3] * alpha})`);
+        atmGrad.addColorStop(1, `rgba(${atm[0]}, ${atm[1]}, ${atm[2]}, 0)`);
+
+        ctx.beginPath();
+        ctx.arc(px, py, radius * 1.4, 0, Math.PI * 2);
+        ctx.fillStyle = atmGrad;
+        ctx.fill();
+    }
+}
+
+
+/* ─── SATURN'S RINGS ──────────────────────────────────────────────────
+   Drawn as a tilted ellipse around Saturn using arc + scale transform.
+*/
+
+function drawRings(px, py, planetRadius, sunX, sunY, alpha) {
+    const ringInner = planetRadius * 1.4;
+    const ringOuter = planetRadius * 2.2;
+
+    ctx.save();
+    ctx.translate(px, py);
+    /* Tilt the rings ~25 degrees */
+    ctx.scale(1, 0.35);
+
+    /* Ring band */
+    for (let r = ringInner; r < ringOuter; r += 1.5) {
+        const progress = (r - ringInner) / (ringOuter - ringInner);
+        /* Rings have gaps — vary opacity to simulate Cassini division */
+        let ringAlpha = alpha * 0.3;
+        if (progress > 0.35 && progress < 0.45) ringAlpha *= 0.2;  /* Cassini gap */
+
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(210, 190, 140, ${ringAlpha})`;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+    }
+
+    ctx.restore();
+}
+
+
+/* ─── DRAW SUN ────────────────────────────────────────────────────────
+   Multi-layered glow effect for a realistic sun.
+*/
+
+function drawSun(sunX, sunY, alpha) {
+    const pulse = 1 + Math.sin(time * 0.015) * 0.08;
+    const r = SUN_RADIUS * pulse;
+
+    /* Outer corona */
+    const corona = ctx.createRadialGradient(sunX, sunY, r * 0.5, sunX, sunY, r * 4);
+    corona.addColorStop(0, `rgba(255, 200, 50, ${alpha * 0.08})`);
+    corona.addColorStop(0.5, `rgba(255, 160, 30, ${alpha * 0.02})`);
+    corona.addColorStop(1, 'rgba(255, 140, 20, 0)');
+    ctx.fillStyle = corona;
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, r * 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* Middle glow */
+    const midGlow = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, r * 2);
+    midGlow.addColorStop(0, `rgba(255, 230, 130, ${alpha * 0.3})`);
+    midGlow.addColorStop(0.4, `rgba(255, 180, 50, ${alpha * 0.12})`);
+    midGlow.addColorStop(1, 'rgba(255, 150, 30, 0)');
+    ctx.fillStyle = midGlow;
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, r * 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* Core */
+    const coreGrad = ctx.createRadialGradient(
+        sunX - r * 0.15, sunY - r * 0.15, 0,
+        sunX, sunY, r
+    );
+    coreGrad.addColorStop(0, `rgba(255, 255, 220, ${alpha * 0.95})`);
+    coreGrad.addColorStop(0.3, `rgba(255, 220, 100, ${alpha * 0.8})`);
+    coreGrad.addColorStop(0.7, `rgba(255, 170, 40, ${alpha * 0.6})`);
+    coreGrad.addColorStop(1, `rgba(220, 120, 20, ${alpha * 0.3})`);
+    ctx.fillStyle = coreGrad;
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* Hot spot */
+    const hot = ctx.createRadialGradient(
+        sunX - r * 0.2, sunY - r * 0.2, 0,
+        sunX, sunY, r * 0.5
+    );
+    hot.addColorStop(0, `rgba(255, 255, 255, ${alpha * 0.6})`);
+    hot.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = hot;
+    ctx.beginPath();
+    ctx.arc(sunX - r * 0.2, sunY - r * 0.2, r * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+
+/* ─── MAIN DRAW LOOP ─────────────────────────────────────────────── */
+
 function drawSolarSystem() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const sunX = canvas.width * sun.xRatio;
-    const sunY = canvas.height * sun.yRatio;
-    const alpha = isPremium ? 1 : 0.4;
-    const glowSize = isPremium ? 40 : 20;
-    const sunPulse = 1 + Math.sin(time * 0.02) * 0.15;
+    const sunX = canvas.width * sunPos.xRatio;
+    const sunY = canvas.height * sunPos.yRatio;
+    const alpha = isPremium ? 0.85 : 0.5;
 
-    /* Sun glow */
-    const grad = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, glowSize * sunPulse);
-    if (isPremium) {
-        grad.addColorStop(0, 'rgba(240,160,48,0.6)');
-        grad.addColorStop(0.3, 'rgba(240,160,48,0.15)');
-        grad.addColorStop(1, 'rgba(240,160,48,0)');
-    } else {
-        grad.addColorStop(0, 'rgba(194,102,10,0.25)');
-        grad.addColorStop(0.3, 'rgba(194,102,10,0.06)');
-        grad.addColorStop(1, 'rgba(194,102,10,0)');
-    }
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(sunX, sunY, glowSize * sunPulse, 0, Math.PI * 2);
-    ctx.fill();
+    /* Draw sun */
+    drawSun(sunX, sunY, alpha);
 
-    /* Sun core */
-    ctx.beginPath();
-    ctx.arc(sunX, sunY, isPremium ? 5 : 3, 0, Math.PI * 2);
-    ctx.fillStyle = isPremium ? 'rgba(240,160,48,0.8)' : 'rgba(194,102,10,0.35)';
-    ctx.fill();
-
-    /* Orbits + planets */
+    /* Draw orbits and planets */
     for (const p of planets) {
         const a = p.orbitA * canvas.width;
         const b = p.orbitB * canvas.height;
         const angle = p.offset + time * p.speed;
+        const radius = sizeOf(p.sizeRatio);
 
-        /* Orbit ring */
+        /* Orbit ring (faint ellipse) */
         ctx.beginPath();
         ctx.ellipse(sunX, sunY, a, b, 0, 0, Math.PI * 2);
         ctx.strokeStyle = isPremium
-            ? 'rgba(240,160,48,0.06)'
-            : 'rgba(194,102,10,0.04)';
-        ctx.lineWidth = 1;
+            ? 'rgba(255, 200, 100, 0.04)'
+            : 'rgba(160, 120, 60, 0.03)';
+        ctx.lineWidth = 0.8;
         ctx.stroke();
 
-        /* Planet position */
+        /* Planet position on orbit */
         const px = sunX + Math.cos(angle) * a;
         const py = sunY + Math.sin(angle) * b;
 
-        /* Planet glow (premium) */
-        if (isPremium) {
-            const pg = ctx.createRadialGradient(px, py, 0, px, py, p.size * 3);
-            pg.addColorStop(0, `rgba(${p.color[0]},${p.color[1]},${p.color[2]},0.2)`);
-            pg.addColorStop(1, `rgba(${p.color[0]},${p.color[1]},${p.color[2]},0)`);
-            ctx.fillStyle = pg;
-            ctx.beginPath();
-            ctx.arc(px, py, p.size * 3, 0, Math.PI * 2);
-            ctx.fill();
+        /* Draw Saturn's rings BEHIND the planet (back half) */
+        if (p.colors.rings) {
+            drawRings(px, py, radius, sunX, sunY, alpha);
         }
 
-        /* Planet body */
-        ctx.beginPath();
-        ctx.arc(px, py, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${p.color[0]},${p.color[1]},${p.color[2]},${alpha * 0.5})`;
-        ctx.fill();
+        /* Draw the planet */
+        drawPlanet(px, py, radius, p.colors, sunX, sunY, alpha);
     }
 
     time++;
     requestAnimationFrame(drawSolarSystem);
 }
 
+/* Start */
 resizeCanvas();
 drawSolarSystem();
 window.addEventListener('resize', resizeCanvas);

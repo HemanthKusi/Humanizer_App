@@ -12,6 +12,7 @@
 
 :root {
     --bg:              #f5f3ee;
+    --bg-gradient:     linear-gradient(135deg, #f9f6f0 0%, #f0ebe0 40%, #f5f0e6 70%, #ede7da 100%);
     --bg-secondary:    #eae7e0;
     --surface:         #ffffff;
     --border:          #e0dcd4;
@@ -30,7 +31,7 @@
     --shadow-hover:    0 8px 40px rgba(0,0,0,0.08);
 
     --radius:          14px;
-    --aurora-opacity:  0;
+    --aurora-opacity:  0.5;
     --grain-opacity:   0.015;
 
     --panel-input-transform:  perspective(1200px) rotateY(0deg);
@@ -80,13 +81,18 @@ body.premium {
 
 body {
     font-family: var(--font-body);
-    background: var(--bg);
+    background: linear-gradient(135deg, #f9f6f0 0%, #f0ebe0 40%, #f5f0e6 70%, #ede7da 100%);
+    background-attachment: fixed;
     color: var(--text-primary);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
     overflow-x: hidden;
     transition: background 0.8s cubic-bezier(0.4, 0, 0.2, 1), color 0.6s ease;
+}
+
+body.premium {
+    background: var(--bg);
 }
 
 
@@ -110,7 +116,7 @@ body {
         radial-gradient(ellipse 80% 50% at 20% 40%, rgba(240,160,48,0.07), transparent),
         radial-gradient(ellipse 60% 60% at 80% 30%, rgba(194,102,10,0.05), transparent),
         radial-gradient(ellipse 70% 40% at 50% 80%, rgba(180,80,0,0.04), transparent);
-    animation: auroraDrift 15s ease-in-out infinite alternate;
+    animation: none;
 }
 
 @keyframes auroraDrift {
@@ -141,6 +147,7 @@ header {
     height: 60px;
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     position: relative; z-index: 10;
 }
 
@@ -154,17 +161,17 @@ header {
 .logo-mark svg { display: block; transition: filter 0.6s ease; }
 body.premium .logo-mark svg { filter: drop-shadow(0 0 8px var(--accent-glow)); }
 
-.logo-electron {
-    transform-origin: 12px 12px;
-    animation: orbit 4s linear infinite;
+.logo-planet {
+    transform-origin: 16px 16px;
+    animation: logoOrbit 3s linear infinite;
 }
 
-@keyframes orbit {
-    from { transform: rotate(0deg) translateX(8px) rotate(0deg); }
-    to   { transform: rotate(360deg) translateX(8px) rotate(-360deg); }
+@keyframes logoOrbit {
+    from { transform: rotate(0deg) translateX(12px) rotate(0deg); }
+    to   { transform: rotate(360deg) translateX(12px) rotate(-360deg); }
 }
 
-.logo-text { font-weight: 700; font-size: 1rem; letter-spacing: -0.02em; }
+.logo-text { font-weight: 700; font-size: 1.35rem; letter-spacing: -0.02em; }
 
 
 /* ═══════════════════════════════════════════════════════════════════
