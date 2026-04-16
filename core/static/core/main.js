@@ -643,7 +643,11 @@ btnRewrite.addEventListener('click', async function () {
         showResult(result);
     } catch (error) {
         console.error('Rewrite failed:', error);
-        showError(error.message);
+        showError(
+            error.message,
+            error.flaggedWords || null,
+            error.field || 'input'
+        );
     }
 });
 
@@ -712,7 +716,12 @@ async function callAPI(text) {
     });
 
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Something went wrong');
+    if (!response.ok) {
+        const err = new Error(data.error || 'Something went wrong');
+        err.flaggedWords = data.flagged_words || null;
+        err.field = data.field || null;
+        throw err;
+    }
     return data;
 }
 
@@ -787,7 +796,7 @@ function showResult(result) {
     btnCopy.style.display = 'flex';
 }
 
-function showError(message) {
+function showError(message, flaggedWords, field) {
     btnRewrite.disabled = false;
     document.querySelector('.btn-text').textContent = toggleDeep.checked ? 'Deep Rewrite' : 'Quick Fix';
     resultStats.style.display = 'none';
@@ -802,6 +811,54 @@ function showError(message) {
             <p>${escapeHtml(message)}</p>
         </div>
     `;
+
+    /* Highlight flagged words in the source textarea */
+    if (flaggedWords && flaggedWords.length > 0) {
+        if (field === 'input') {
+            showInlineHighlights(inputText, flaggedWords);
+        } else if (field === 'voice') {
+            showInlineHighlights(voiceSample, flaggedWords);
+        }
+    }
+}
+
+/**
+ * Temporarily replaces a textarea with a styled div showing
+ * flagged words highlighted in red. When the user clicks the
+ * div, it swaps back to the textarea for editing.
+ *
+ * @param {HTMLTextAreaElement} textarea — the textarea to highlight
+ * @param {Array} words — list of flagged words
+ */
+function showInlineHighlights(textarea, words) {
+    const text = textarea.value;
+
+    /* Build highlighted HTML */
+    let html = escapeHtml(text);
+    for (const word of words) {
+        const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp('\\b(' + escaped + ')\\b', 'gi');
+        html = html.replace(regex, '<span class="flagged-word">$1</span>');
+    }
+
+    /* Create a div that looks exactly like the textarea */
+    const overlay = document.createElement('div');
+    overlay.className = 'highlight-overlay';
+    overlay.innerHTML = html;
+
+    /* Match the textarea's actual height */
+    overlay.style.height = textarea.offsetHeight + 'px';
+
+    /* Hide textarea, show overlay in its place */
+    textarea.style.display = 'none';
+    textarea.parentElement.insertBefore(overlay, textarea);
+
+    /* Click overlay to go back to editing */
+    overlay.addEventListener('click', function () {
+        overlay.remove();
+        textarea.style.display = '';
+        textarea.focus();
+    });
 }
 
 

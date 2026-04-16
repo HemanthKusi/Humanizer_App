@@ -23,6 +23,8 @@ from django.views.decorators.http import require_POST
 from core.humanizer_engine import humanize_rule_based
 from core.llm_engine import humanize_with_llm
 
+from core.sanitizer import sanitize_input
+
 
 def index(request: HttpRequest) -> HttpResponse:
     """
@@ -67,11 +69,44 @@ def humanize(request: HttpRequest) -> JsonResponse:
         # Parse the JSON body
         body = json.loads(request.body.decode('utf-8'))
 
-        # Extract fields
-        # Extract fields
-        text = body.get('text', '').strip()
+        # Extract and sanitize fields
+        # Sanitization happens BEFORE length validation so attackers
+        # can't bypass limits with invisible characters.
+        raw_text = body.get('text', '')
+        raw_voice = body.get('voice_sample', '')
         deep_rewrite = body.get('deep_rewrite', False)
-        voice_sample = body.get('voice_sample', '').strip()
+
+        # Sanitize input text
+        if raw_text:
+            text_result = sanitize_input(raw_text)
+            text = text_result['text']
+            if text_result['profanity_flagged']:
+                return JsonResponse(
+                    {
+                        'error': 'Your text contains inappropriate language. Please remove the highlighted words and try again.',
+                        'flagged_words': text_result['flagged_words'],
+                        'field': 'input',
+                    },
+                    status=400
+                )
+        else:
+            text = ''
+
+        # Sanitize voice sample
+        if raw_voice:
+            voice_result = sanitize_input(raw_voice)
+            voice_sample = voice_result['text']
+            if voice_result['profanity_flagged']:
+                return JsonResponse(
+                    {
+                        'error': 'Your writing sample contains inappropriate language. Please remove the highlighted words and try again.',
+                        'flagged_words': voice_result['flagged_words'],
+                        'field': 'voice',
+                    },
+                    status=400
+                )
+        else:
+            voice_sample = ''
 
         # Validate: no empty text
         if not text:

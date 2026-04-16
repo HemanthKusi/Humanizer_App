@@ -56,6 +56,11 @@ class SimpleRateLimiter:
         self.request_count = 0
 
     def __call__(self, request):
+        # Skip rate limiting in development
+        import os
+        if os.getenv('DEBUG', 'False').lower() == 'true':
+            return self.get_response(request)
+
         # Only rate-limit API POST endpoints
         if request.method == 'POST' and request.path.startswith('/api/'):
             ip = self._get_client_ip(request)
@@ -90,7 +95,7 @@ class SimpleRateLimiter:
 
             # Check hourly limit (25 per hour)
             if len(self.requests[ip]) >= self.HOURLY_LIMIT:
-                wait = int((self.HOURLY_WINDOW - (now - min(self.requests[ip]))) / 60)
+                wait = max(1, int((self.HOURLY_WINDOW - (now - min(self.requests[ip]))) / 60))
                 return JsonResponse(
                     {'error': f'Hourly limit reached ({self.HOURLY_LIMIT} requests). Try again in ~{wait} minutes.'},
                     status=429
@@ -98,7 +103,7 @@ class SimpleRateLimiter:
 
             # Check daily limit (40 per day)
             if len(self.requests[ip]) >= self.DAILY_LIMIT:
-                wait = int((self.DAILY_WINDOW - (now - min(self.requests[ip]))) / 3600)
+                wait = max(1, int((self.DAILY_WINDOW - (now - min(self.requests[ip]))) / 3600))
                 return JsonResponse(
                     {'error': f'Daily limit reached ({self.DAILY_LIMIT} requests). Try again in ~{wait} hours.'},
                     status=429
