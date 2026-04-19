@@ -124,8 +124,8 @@ IMPERFECTION: A tangent. An aside in parentheses. A thought that doesn't quite l
 - Write in paragraphs, not lists (unless a list genuinely makes sense)
 - Don't start more than one paragraph with the same word
 - Don't use semicolons in casual or general writing
-- Don't use em dashes (—). Use commas, periods, or "and" instead. This is critical. Zero em dashes in the output.
-- Don't use double hyphens (--) either
+- ZERO em dashes (—) in the output. This is the #1 most important formatting rule. Every single em dash must be replaced with a comma, period, or the word "and". If you use even one em dash, the output fails.
+- ZERO double hyphens (--) either. Same rule.
 - Never write "In conclusion" or "To summarize" or "Overall"
 
 ## OUTPUT
@@ -377,6 +377,14 @@ def humanize_with_llm(text, voice_sample='', tone='default'):
             f'Unknown LLM provider: "{LLM_PROVIDER}". '
             f'Set LLM_PROVIDER in .env to "openai" or "anthropic".'
         )
+
+    # Post-processing: remove any em dashes the LLM used despite instructions
+    rewritten = rewritten.replace('—', ', ')
+    rewritten = rewritten.replace('--', ', ')
+    # Clean up double commas or comma-space-comma from replacements
+    rewritten = rewritten.replace(', ,', ',')
+    rewritten = rewritten.replace(',,', ',')
+    rewritten = rewritten.replace(' ,', ',')
 
     return {
         'text': rewritten,
