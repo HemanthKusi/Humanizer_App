@@ -14,6 +14,11 @@ The humanize view now supports two modes:
 The toggle switch on the frontend controls which mode is used.
 """
 
+import logging
+import time
+api_logger = logging.getLogger('api')
+
+
 import json
 
 from django.shortcuts import render
@@ -65,6 +70,8 @@ def humanize(request: HttpRequest) -> JsonResponse:
     Returns:
         JsonResponse with humanized text, changes, and stats
     """
+    request_start = time.time()
+
     try:
         # Parse the JSON body
         body = json.loads(request.body.decode('utf-8'))
@@ -81,6 +88,11 @@ def humanize(request: HttpRequest) -> JsonResponse:
             text_result = sanitize_input(raw_text)
             text = text_result['text']
             if text_result['profanity_flagged']:
+                security_logger = logging.getLogger('security')
+                security_logger.warning(
+                    f'PROFANITY | ip={request.META.get("REMOTE_ADDR")} | '
+                    f'field=input | words={text_result["flagged_words"]}'
+                )
                 return JsonResponse(
                     {
                         'error': 'Your text contains inappropriate language. Please remove the highlighted words and try again.',
@@ -97,6 +109,11 @@ def humanize(request: HttpRequest) -> JsonResponse:
             voice_result = sanitize_input(raw_voice)
             voice_sample = voice_result['text']
             if voice_result['profanity_flagged']:
+                security_logger = logging.getLogger('security')
+                security_logger.warning(
+                    f'PROFANITY | ip={request.META.get("REMOTE_ADDR")} | '
+                    f'field=voice | words={voice_result["flagged_words"]}'
+                )
                 return JsonResponse(
                     {
                         'error': 'Your writing sample contains inappropriate language. Please remove the highlighted words and try again.',
@@ -110,6 +127,9 @@ def humanize(request: HttpRequest) -> JsonResponse:
 
         # Validate: no empty text
         if not text:
+            api_logger.warning(
+                f'EMPTY INPUT | ip={request.META.get("REMOTE_ADDR")}'
+            )
             return JsonResponse(
                 {'error': 'No text provided. Please paste some text to humanize.'},
                 status=400
@@ -128,6 +148,14 @@ def humanize(request: HttpRequest) -> JsonResponse:
 
         # If toggle is OFF, return rule-based result only
         if not deep_rewrite:
+            duration = round(time.time() - request_start, 2)
+            api_logger.info(
+                f'QUICK FIX | ip={request.META.get("REMOTE_ADDR")} | '
+                f'input_words={len(text.split())} | '
+                f'output_words={len(rule_result["text"].split())} | '
+                f'patterns={len(rule_result["changes"])} | '
+                f'duration={duration}s'
+            )
             return JsonResponse({
                 'text': rule_result['text'],
                 'changes': rule_result['changes'],
@@ -140,9 +168,12 @@ def humanize(request: HttpRequest) -> JsonResponse:
             llm_result = humanize_with_llm(text, voice_sample=voice_sample)
         except Exception as llm_error:
             # Log the real error server-side for debugging
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f'LLM call failed: {str(llm_error)}')
+            duration = round(time.time() - request_start, 2)
+            api_logger.error(
+                f'LLM FAILED | ip={request.META.get("REMOTE_ADDR")} | '
+                f'error={str(llm_error)} | '
+                f'duration={duration}s'
+            )
 
             # Return a safe generic message to the user
             # NEVER expose the raw error — it might contain API keys
@@ -166,6 +197,17 @@ def humanize(request: HttpRequest) -> JsonResponse:
             'patterns_found': len(rule_result['changes']),
         }
 
+        duration = round(time.time() - request_start, 2)
+        has_voice = 'yes' if voice_sample else 'no'
+        api_logger.info(
+            f'DEEP REWRITE | ip={request.META.get("REMOTE_ADDR")} | '
+            f'input_words={len(text.split())} | '
+            f'output_words={len(llm_result["text"].split())} | '
+            f'voice_match={has_voice} | '
+            f'model={llm_result["model"]} | '
+            f'duration={duration}s'
+        )
+
         return JsonResponse({
             'text': llm_result['text'],
             'changes': rule_result['changes'],
@@ -179,9 +221,10 @@ def humanize(request: HttpRequest) -> JsonResponse:
             status=400
         )
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f'Humanize endpoint error: {str(e)}')
+        api_logger.error(
+            f'UNHANDLED ERROR | ip={request.META.get("REMOTE_ADDR")} | '
+            f'error={str(e)}'
+        )
 
         return JsonResponse(
             {'error': 'Something went wrong. Please try again.'},

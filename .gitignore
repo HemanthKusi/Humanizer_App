@@ -24,3 +24,6 @@ db.sqlite3
 dist/
 build/
 *.egg-info/
+
+# log files
+logs/

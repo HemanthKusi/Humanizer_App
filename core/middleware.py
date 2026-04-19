@@ -11,6 +11,10 @@ Contains:
 import time
 from django.http import JsonResponse
 
+import logging
+
+security_logger = logging.getLogger('security')
+
 
 class SimpleRateLimiter:
     """
@@ -79,6 +83,10 @@ class SimpleRateLimiter:
             # Check burst limit (3 in 5 seconds)
             recent = [t for t in self.requests[ip] if now - t < self.BURST_WINDOW]
             if len(recent) >= self.BURST_LIMIT:
+                security_logger.warning(
+                    f'RATE LIMIT BURST | ip={ip} | '
+                    f'{len(recent)} requests in {self.BURST_WINDOW}s'
+                )
                 return JsonResponse(
                     {'error': 'Too many requests. Please wait a few seconds.'},
                     status=429
@@ -87,6 +95,10 @@ class SimpleRateLimiter:
             # Check minute limit (10 per minute)
             last_minute = [t for t in self.requests[ip] if now - t < self.MINUTE_WINDOW]
             if len(last_minute) >= self.MINUTE_LIMIT:
+                security_logger.warning(
+                    f'RATE LIMIT MINUTE | ip={ip} | '
+                    f'{len(last_minute)} requests in 60s'
+                )
                 wait = int(self.MINUTE_WINDOW - (now - min(last_minute)))
                 return JsonResponse(
                     {'error': f'Rate limit reached. Try again in {wait} seconds.'},
@@ -95,6 +107,10 @@ class SimpleRateLimiter:
 
             # Check hourly limit (25 per hour)
             if len(self.requests[ip]) >= self.HOURLY_LIMIT:
+                security_logger.warning(
+                    f'RATE LIMIT HOURLY | ip={ip} | '
+                    f'{len(self.requests[ip])} requests in 1h'
+                )
                 wait = max(1, int((self.HOURLY_WINDOW - (now - min(self.requests[ip]))) / 60))
                 return JsonResponse(
                     {'error': f'Hourly limit reached ({self.HOURLY_LIMIT} requests). Try again in ~{wait} minutes.'},
@@ -103,6 +119,10 @@ class SimpleRateLimiter:
 
             # Check daily limit (40 per day)
             if len(self.requests[ip]) >= self.DAILY_LIMIT:
+                security_logger.warning(
+                    f'RATE LIMIT DAILY | ip={ip} | '
+                    f'{len(self.requests[ip])} requests in 24h'
+                )
                 wait = max(1, int((self.DAILY_WINDOW - (now - min(self.requests[ip]))) / 3600))
                 return JsonResponse(
                     {'error': f'Daily limit reached ({self.DAILY_LIMIT} requests). Try again in ~{wait} hours.'},

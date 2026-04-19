@@ -178,3 +178,115 @@ STATICFILES_FINDERS = [
 
 # Default primary key type for database models
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ─── LOGGING ─────────────────────────────────────────────────────────
+#
+# Three log files:
+#   app.log      — general application events (info+)
+#   api.log      — every API request with timing (info+)
+#   security.log — rate limits, profanity, suspicious activity (warning+)
+#
+# Log rotation: each file maxes at 5MB, keeps 3 backups.
+# So max disk usage = 3 files × 5MB × 3 backups = 45MB total.
+
+import os
+
+LOG_DIR = os.path.join(BASE_DIR, 'logs')
+os.makedirs(LOG_DIR, exist_ok=True)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+
+    # ── Formatters: how log lines look ──
+    'formatters': {
+        'standard': {
+            'format': '[{asctime}] {levelname} {name}: {message}',
+            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+        'detailed': {
+            'format': '[{asctime}] {levelname} {name} ({filename}:{lineno}): {message}',
+            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+    },
+
+    # ── Handlers: where logs go ──
+    'handlers': {
+        # Console — always active, useful during development
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'standard',
+            'level': 'INFO',
+        },
+
+        # app.log — general application events
+        'app_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(LOG_DIR, 'app.log'),
+            'maxBytes': 5 * 1024 * 1024,    # 5MB per file
+            'backupCount': 3,                 # Keep 3 old files
+            'formatter': 'detailed',
+            'level': 'INFO',
+        },
+
+        # api.log — API request tracking
+        'api_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(LOG_DIR, 'api.log'),
+            'maxBytes': 5 * 1024 * 1024,
+            'backupCount': 3,
+            'formatter': 'detailed',
+            'level': 'INFO',
+        },
+
+        # security.log — rate limits, profanity, attacks
+        'security_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(LOG_DIR, 'security.log'),
+            'maxBytes': 5 * 1024 * 1024,
+            'backupCount': 3,
+            'formatter': 'detailed',
+            'level': 'WARNING',
+        },
+    },
+
+    # ── Loggers: named channels ──
+    'loggers': {
+        # General app logger
+        'app': {
+            'handlers': ['console', 'app_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+
+        # API request logger
+        'api': {
+            'handlers': ['console', 'api_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+
+        # Security logger
+        'security': {
+            'handlers': ['console', 'security_file'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+
+        # Django's own logging
+        'django': {
+            'handlers': ['console', 'app_file'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+
+        # Catch database query errors
+        'django.db.backends': {
+            'handlers': ['console', 'app_file'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
+}
