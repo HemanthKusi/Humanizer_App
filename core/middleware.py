@@ -64,10 +64,6 @@ class SimpleRateLimiter:
         self.request_count = 0
 
     def __call__(self, request):
-        # Skip rate limiting in development
-        import os
-        if os.getenv('DEBUG', 'False').lower() == 'true':
-            return self.get_response(request)
 
         # Only rate-limit API POST endpoints
         if request.method == 'POST' and request.path.startswith('/api/'):
@@ -83,6 +79,11 @@ class SimpleRateLimiter:
                 t for t in self.requests[ip]
                 if now - t < self.DAILY_WINDOW
             ]
+
+            # Skip rate limiting in development but track usage
+            import os
+            if os.getenv('DEBUG', 'False').lower() == 'true':
+                return self.get_response(request)
 
             # Check burst limit (3 in 5 seconds)
             recent = [t for t in self.requests[ip] if now - t < self.BURST_WINDOW]
@@ -132,9 +133,6 @@ class SimpleRateLimiter:
                     {'error': f'Daily limit reached ({self.DAILY_LIMIT} requests). Try again in ~{wait} hours.'},
                     status=429
                 )
-            
-            # Record this request
-            self.requests[ip].append(now)
 
             # Periodic cleanup of stale IPs
             self.request_count += 1

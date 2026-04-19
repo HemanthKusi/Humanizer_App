@@ -32,6 +32,25 @@ from core.sanitizer import sanitize_input
 
 from core.middleware import request_tracker
 
+def track_usage(request):
+    """
+    Record a successful request in the rate limiter's tracker.
+    Only call this AFTER a successful response is ready.
+    """
+    import time
+
+    x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded:
+        ip = x_forwarded.split(',')[0].strip()
+    else:
+        ip = request.META.get('REMOTE_ADDR', '0.0.0.0')
+
+    now = time.time()
+
+    if ip not in request_tracker:
+        request_tracker[ip] = []
+
+    request_tracker[ip].append(now)
 
 def index(request: HttpRequest) -> HttpResponse:
     """
@@ -151,6 +170,7 @@ def humanize(request: HttpRequest) -> JsonResponse:
         # If toggle is OFF, return rule-based result only
         if not deep_rewrite:
             duration = round(time.time() - request_start, 2)
+            track_usage(request)
             api_logger.info(
                 f'QUICK FIX | ip={request.META.get("REMOTE_ADDR")} | '
                 f'input_words={len(text.split())} | '
@@ -201,6 +221,7 @@ def humanize(request: HttpRequest) -> JsonResponse:
 
         duration = round(time.time() - request_start, 2)
         has_voice = 'yes' if voice_sample else 'no'
+        track_usage(request)
         api_logger.info(
             f'DEEP REWRITE | ip={request.META.get("REMOTE_ADDR")} | '
             f'input_words={len(text.split())} | '
