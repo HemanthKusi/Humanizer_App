@@ -25,4 +25,7 @@ urlpatterns = [
     # API endpoint — receives text, returns humanized JSON
     # The frontend calls this with fetch() when the user clicks Humanize
     path('api/humanize/', views.humanize, name='humanize'),
+    # API endpoint — returns usage stats for the current user
+    # This is used by the frontend to show usage info on the homepage
+    path('api/usage/', views.usage, name='usage'),
 ]

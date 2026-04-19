@@ -15,6 +15,10 @@ import logging
 
 security_logger = logging.getLogger('security')
 
+# Module-level request tracker — shared between middleware and views.
+# This allows the /api/usage/ endpoint to read current usage.
+request_tracker = {}
+
 
 class SimpleRateLimiter:
     """
@@ -54,8 +58,8 @@ class SimpleRateLimiter:
 
     def __init__(self, get_response):
         self.get_response = get_response
-        # {ip_address: [list of timestamps]}
-        self.requests = {}
+        # Use the module-level tracker so views can access it
+        self.requests = request_tracker
         # Cleanup counter — purge stale IPs every 100 requests
         self.request_count = 0
 

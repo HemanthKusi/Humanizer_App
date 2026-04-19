@@ -1026,3 +1026,69 @@ body.premium .voice-section {
     border-color: #dc2626 !important;
     box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15) !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   USAGE COUNTER
+   ═══════════════════════════════════════════════════════════════════ */
+
+.usage-counter {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 0.5rem 0 0;
+    font-size: 0.68rem;
+    color: var(--text-tertiary);
+    transition: color 0.6s ease;
+}
+
+.usage-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.usage-label {
+    color: var(--text-tertiary);
+}
+
+.usage-value {
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    transition: color 0.3s ease;
+}
+
+/* Turns amber when usage is above 70% */
+.usage-value.warning {
+    color: #d97706;
+}
+
+/* Turns red when usage is above 90% */
+.usage-value.danger {
+    color: #dc2626;
+}
+
+/* Bar visualization */
+.usage-bar {
+    width: 40px;
+    height: 3px;
+    background: var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.usage-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--accent);
+    transition: width 0.4s ease, background 0.3s ease;
+}
+
+.usage-bar-fill.warning {
+    background: #d97706;
+}
+
+.usage-bar-fill.danger {
+    background: #dc2626;
+}

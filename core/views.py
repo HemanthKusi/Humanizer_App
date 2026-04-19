@@ -30,6 +30,8 @@ from core.llm_engine import humanize_with_llm
 
 from core.sanitizer import sanitize_input
 
+from core.middleware import request_tracker
+
 
 def index(request: HttpRequest) -> HttpResponse:
     """
@@ -230,3 +232,41 @@ def humanize(request: HttpRequest) -> JsonResponse:
             {'error': 'Something went wrong. Please try again.'},
             status=500
         )
+    
+def usage(request: HttpRequest) -> JsonResponse:
+    """
+    API endpoint: returns current usage stats for this IP.
+
+    The frontend calls this on page load and after each request
+    to show the user how many requests they've used.
+
+    Response format:
+        {
+            "minute": { "used": 3, "limit": 10 },
+            "hourly": { "used": 12, "limit": 25 },
+            "daily":  { "used": 18, "limit": 40 }
+        }
+    """
+
+    now = time.time()
+
+    # Get client IP (same logic as middleware)
+    x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded:
+        ip = x_forwarded.split(',')[0].strip()
+    else:
+        ip = request.META.get('REMOTE_ADDR', '0.0.0.0')
+
+    # Get timestamps for this IP
+    timestamps = request_tracker.get(ip, [])
+
+    # Count requests in each window
+    minute_count = len([t for t in timestamps if now - t < 60])
+    hourly_count = len([t for t in timestamps if now - t < 3600])
+    daily_count = len([t for t in timestamps if now - t < 86400])
+
+    return JsonResponse({
+        'minute': {'used': minute_count, 'limit': 10},
+        'hourly': {'used': hourly_count, 'limit': 25},
+        'daily': {'used': daily_count, 'limit': 40},
+    })

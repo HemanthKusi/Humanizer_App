@@ -408,6 +408,8 @@ const INPUT_MIN_CHARS = 1000;
 const INPUT_MAX_WORDS = 500;
 const INPUT_MAX_CHARS = 5000;
 
+const usageCounter = document.getElementById('usage-counter');
+
 let lastRequestTime = 0;
 const REQUEST_COOLDOWN = 3000;  /* 3 seconds between requests */
 
@@ -794,6 +796,9 @@ function showResult(result) {
     resultStats.style.display = 'block';
 
     btnCopy.style.display = 'flex';
+
+    /* Refresh usage counter */
+    updateUsage();
 }
 
 function showError(message, flaggedWords, field) {
@@ -820,6 +825,8 @@ function showError(message, flaggedWords, field) {
             showInlineHighlights(voiceSample, flaggedWords);
         }
     }
+    /* Refresh usage counter */
+    updateUsage();
 }
 
 /**
@@ -952,3 +959,62 @@ function showToast(message) {
     toast.classList.add('show');
     setTimeout(() => toast.classList.remove('show'), 2500);
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   USAGE COUNTER
+   ═══════════════════════════════════════════════════════════════════ */
+
+/**
+ * Fetch current usage stats from the backend and update the display.
+ * Called on page load and after every rewrite request.
+ */
+async function updateUsage() {
+    try {
+        const response = await fetch('/api/usage/');
+        const data = await response.json();
+        renderUsage(data);
+    } catch (error) {
+        /* Silently fail — usage display is not critical */
+        console.error('Failed to fetch usage:', error);
+    }
+}
+
+/**
+ * Render the usage counter with bars and numbers.
+ *
+ * @param {object} data — { minute, hourly, daily } each with { used, limit }
+ */
+function renderUsage(data) {
+    const items = [
+        { label: 'Min', used: data.minute.used, limit: data.minute.limit },
+        { label: 'Hour', used: data.hourly.used, limit: data.hourly.limit },
+        { label: 'Day', used: data.daily.used, limit: data.daily.limit },
+    ];
+
+    let html = '';
+
+    for (const item of items) {
+        const pct = item.limit > 0 ? (item.used / item.limit) * 100 : 0;
+        const fillWidth = Math.min(pct, 100);
+
+        /* Color class based on usage percentage */
+        let colorClass = '';
+        if (pct >= 90) colorClass = 'danger';
+        else if (pct >= 70) colorClass = 'warning';
+
+        html += `
+            <div class="usage-item">
+                <span class="usage-label">${item.label}</span>
+                <span class="usage-value ${colorClass}">${item.used}/${item.limit}</span>
+                <div class="usage-bar">
+                    <div class="usage-bar-fill ${colorClass}" style="width: ${fillWidth}%"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    usageCounter.innerHTML = html;
+}
+
+/* Fetch usage on page load */
+updateUsage();
