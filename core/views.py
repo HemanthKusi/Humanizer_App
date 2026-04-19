@@ -103,6 +103,7 @@ def humanize(request: HttpRequest) -> JsonResponse:
         raw_text = body.get('text', '')
         raw_voice = body.get('voice_sample', '')
         deep_rewrite = body.get('deep_rewrite', False)
+        tone = body.get('tone', 'default')
 
         # Sanitize input text
         if raw_text:
@@ -187,7 +188,7 @@ def humanize(request: HttpRequest) -> JsonResponse:
 
         # ── Step 2: Toggle is ON — send text to LLM ──
         try:
-            llm_result = humanize_with_llm(text, voice_sample=voice_sample)
+            llm_result = humanize_with_llm(text, voice_sample=voice_sample, tone=tone)
         except Exception as llm_error:
             # Log the real error server-side for debugging
             duration = round(time.time() - request_start, 2)

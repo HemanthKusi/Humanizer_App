@@ -410,6 +410,9 @@ const INPUT_MAX_CHARS = 5000;
 
 const usageCounter = document.getElementById('usage-counter');
 
+const toneButtons = document.querySelectorAll('.tone-btn');
+let selectedTone = 'default';
+
 let lastRequestTime = 0;
 const REQUEST_COOLDOWN = 3000;  /* 3 seconds between requests */
 
@@ -501,6 +504,10 @@ toggleDeep.addEventListener('change', function () {
         modeQuick.classList.add('active');
         modeDeep.classList.remove('active');
         document.querySelector('.btn-text').textContent = 'Quick Fix';
+        /* Reset tone selection when switching to quick fix */
+        selectedTone = 'default';
+        toneButtons.forEach(function (b) { b.classList.remove('active'); });
+        document.querySelector('[data-tone="default"]').classList.add('active');
     }
 
     /*
@@ -621,6 +628,28 @@ function getVoiceSample() {
     return text;
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   TONE SELECTOR
+   ═══════════════════════════════════════════════════════════════════ */
+
+toneButtons.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        /* Remove active from all buttons */
+        toneButtons.forEach(function (b) { b.classList.remove('active'); });
+
+        /* Activate clicked button */
+        this.classList.add('active');
+        selectedTone = this.getAttribute('data-tone');
+
+        /* If there's already a result, pulse the rewrite button */
+        const hasResult = document.getElementById('output-text');
+        if (hasResult && !btnRewrite.disabled) {
+            btnRewrite.classList.add('pulse');
+            setTimeout(function () { btnRewrite.classList.remove('pulse'); }, 800);
+        }
+    });
+});
+
 
 /* ═══════════════════════════════════════════════════════════════════
    5. REWRITE BUTTON
@@ -714,6 +743,7 @@ async function callAPI(text) {
             text,
             deep_rewrite: deepRewrite,
             voice_sample: voiceSampleText,
+            tone: deepRewrite ? selectedTone : 'default',
         }),
     });
 
@@ -750,8 +780,14 @@ function showLoading() {
         const sample = voiceSample.value.trim();
         if (sample.length > 0) {
             message = 'Matching your writing style...';
+        } else if (selectedTone !== 'default') {
+            const toneNames = {
+                casual: 'casual', formal: 'formal', academic: 'academic',
+                simple: 'simple', summarize: 'summarized', expand: 'expanded'
+            };
+            message = `Rewriting in ${toneNames[selectedTone] || selectedTone} style...`;
         } else {
-            message = 'Deep Rewriting...';
+            message = 'Rewriting with AI...';
         }
     }
 

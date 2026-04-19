@@ -169,11 +169,101 @@ Now rewrite the AI text in THEIR voice, not in generic "good writing" voice. Mat
 Now rewrite the following text in this person's voice:
 """
 
+# ─── TONE MODIFIERS ──────────────────────────────────────────────────
+#
+# Each tone adds specific instructions that modify the base system prompt.
+# These get appended to the system prompt when a tone is selected.
+# "default" uses the base prompt without modifications.
+
+TONE_PROMPTS = {
+    'default': '',
+
+    'casual': """
+TONE OVERRIDE — CASUAL:
+Write like you're explaining this to a friend over coffee. Use:
+- Contractions everywhere (don't, it's, won't, can't)
+- Everyday language, no jargon unless you immediately explain it
+- Short sentences mixed with conversational longer ones
+- Phrases like "honestly", "the thing is", "basically", "look"
+- First person when it fits ("I think", "from what I can tell")
+- It's okay to start sentences with "And", "But", "So"
+- No formal transitions. Just start the next thought.
+- The reading level should be around 8th grade
+""",
+
+    'formal': """
+TONE OVERRIDE — FORMAL:
+Write in a professional, polished tone suitable for business or official documents. Use:
+- Complete sentences, no fragments
+- Third person perspective (avoid "I" and "you")
+- Precise vocabulary without being pretentious
+- Proper transitions between ideas
+- No contractions (use "do not" instead of "don't")
+- No slang, colloquialisms, or casual phrases
+- Measured, confident tone without being stiff
+- Structured paragraphs with clear topic sentences
+""",
+
+    'academic': """
+TONE OVERRIDE — ACADEMIC:
+Write in a scholarly tone suitable for academic papers or research summaries. Use:
+- Third person perspective throughout
+- Formal vocabulary appropriate to the subject matter
+- Hedging language where appropriate ("suggests", "indicates", "appears to")
+- Passive voice is acceptable when the actor is unknown or unimportant
+- Reference structure: "Research indicates...", "Studies suggest..."
+- No contractions, no colloquialisms, no first person
+- Complex sentence structures with subordinate clauses are fine
+- Maintain objectivity, present evidence rather than opinions
+- Use discipline-appropriate terminology
+""",
+
+    'simple': """
+TONE OVERRIDE — SIMPLE:
+Rewrite this so a 12-year-old could understand it. Use:
+- Short sentences (under 15 words each when possible)
+- Common everyday words only
+- Explain any technical term immediately after using it
+- One idea per sentence
+- One topic per paragraph
+- Active voice always
+- No jargon, no acronyms unless explained
+- Reading level should be around 6th grade
+- If a concept is complex, use an analogy or example
+""",
+
+    'summarize': """
+TONE OVERRIDE — SUMMARIZE:
+Condense this text to roughly 30-40% of its original length. Rules:
+- Keep only the most important points
+- Remove all examples, anecdotes, and repetition
+- Remove any filler or padding sentences
+- Each remaining sentence should carry significant information
+- Maintain the original meaning and conclusions
+- Do not add any new information
+- Use concise, direct language
+- The result should be a tight summary, not a rewrite
+""",
+
+    'expand': """
+TONE OVERRIDE — EXPAND:
+Expand this text to roughly 150-180% of its original length. Rules:
+- Add relevant examples, analogies, or illustrations for key points
+- Develop ideas that are mentioned briefly into full paragraphs
+- Add context or background where it helps understanding
+- Include "for instance" or "consider" to introduce examples
+- Do not add false information or made-up statistics
+- Do not pad with filler phrases or repeat the same point
+- Every added sentence should genuinely help the reader understand better
+- Maintain the same tone and voice as the original
+""",
+}
+
 
 # ─── API CALL FUNCTIONS ─────────────────────────────────────────────────────
 
 
-def call_openai(text, voice_sample=''):
+def call_openai(text, voice_sample='', tone='default'):
     """
     Send text to OpenAI's API for quality rewriting.
 
@@ -184,6 +274,7 @@ def call_openai(text, voice_sample=''):
     Args:
         text (str): The original AI-generated text to rewrite
         voice_sample (str): Optional user writing sample for style matching
+        tone (str): The tone to use for the rewriting (e.g., "formal", "informal")
 
     Returns:
         str: The rewritten text
@@ -191,10 +282,17 @@ def call_openai(text, voice_sample=''):
     client = OpenAI()
 
     # Build the system prompt
+    # Build the system prompt with optional tone and voice
+    system = SYSTEM_PROMPT
+
+    # Add tone modifier (if not default)
+    tone_addition = TONE_PROMPTS.get(tone, '')
+    if tone_addition:
+        system = system + "\n\n" + tone_addition
+
+    # Add voice calibration (overrides tone for style but keeps tone's structural rules)
     if voice_sample:
-        system = VOICE_CALIBRATION_PROMPT.format(sample=voice_sample) + "\n\n" + SYSTEM_PROMPT
-    else:
-        system = SYSTEM_PROMPT
+        system = VOICE_CALIBRATION_PROMPT.format(sample=voice_sample) + "\n\n" + system
 
     response = client.chat.completions.create(
         model=LLM_MODEL,
@@ -211,13 +309,14 @@ def call_openai(text, voice_sample=''):
     return response.choices[0].message.content.strip()
 
 
-def call_anthropic(text, voice_sample=''):
+def call_anthropic(text, voice_sample='', tone='default'):
     """
     Send text to Anthropic's Claude API for quality rewriting.
 
     Args:
         text (str): The original AI-generated text to rewrite
         voice_sample (str): Optional user writing sample for style matching
+        tone (str): The tone to use for the rewriting (e.g., "formal", "informal")
 
     Returns:
         str: The rewritten text
@@ -226,10 +325,14 @@ def call_anthropic(text, voice_sample=''):
 
     client = anthropic.Anthropic()
 
+    system = SYSTEM_PROMPT
+
+    tone_addition = TONE_PROMPTS.get(tone, '')
+    if tone_addition:
+        system = system + "\n\n" + tone_addition
+
     if voice_sample:
-        system = VOICE_CALIBRATION_PROMPT.format(sample=voice_sample) + "\n\n" + SYSTEM_PROMPT
-    else:
-        system = SYSTEM_PROMPT
+        system = VOICE_CALIBRATION_PROMPT.format(sample=voice_sample) + "\n\n" + system
 
     response = client.messages.create(
         model=LLM_MODEL,
@@ -246,7 +349,7 @@ def call_anthropic(text, voice_sample=''):
 # ─── MAIN ENTRY POINT ───────────────────────────────────────────────────────
 
 
-def humanize_with_llm(text, voice_sample=''):
+def humanize_with_llm(text, voice_sample='', tone='default'):
     """
     Rewrite AI-generated text into quality human writing.
 
@@ -256,6 +359,7 @@ def humanize_with_llm(text, voice_sample=''):
     Args:
         text (str): The original AI-generated text
         voice_sample (str): Optional writing sample to match style
+        tone (str): The tone to use for the rewriting (e.g., "formal", "informal")
 
     Returns:
         dict: {
@@ -265,9 +369,9 @@ def humanize_with_llm(text, voice_sample=''):
         }
     """
     if LLM_PROVIDER == 'openai':
-        rewritten = call_openai(text, voice_sample)
+        rewritten = call_openai(text, voice_sample, tone)
     elif LLM_PROVIDER == 'anthropic':
-        rewritten = call_anthropic(text, voice_sample)
+        rewritten = call_anthropic(text, voice_sample, tone)
     else:
         raise ValueError(
             f'Unknown LLM provider: "{LLM_PROVIDER}". '

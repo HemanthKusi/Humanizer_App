@@ -1092,3 +1092,73 @@ body.premium .voice-section {
 .usage-bar-fill.danger {
     background: #dc2626;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   TONE SELECTOR
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Hidden by default, shown only in deep rewrite mode */
+.tone-bar {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+}
+
+body.premium .tone-bar {
+    display: flex;
+}
+
+.tone-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-right: 0.25rem;
+}
+
+.tone-buttons {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.tone-btn {
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.35rem 0.75rem;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    user-select: none;
+}
+
+.tone-btn:hover {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.tone-btn.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+    box-shadow: 0 2px 8px rgba(194, 102, 10, 0.2);
+}
+
+body.premium .tone-btn.active {
+    box-shadow: 0 2px 12px var(--accent-glow);
+}
+
+@media (max-width: 480px) {
+    .tone-buttons { gap: 0.3rem; }
+    .tone-btn { font-size: 0.68rem; padding: 0.3rem 0.6rem; }
+}
