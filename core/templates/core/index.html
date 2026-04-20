@@ -135,6 +135,33 @@ Min 100 words · Max 500 words"></textarea>
                         <span class="panel-label">Result</span>
                         <div class="panel-header-right">
                             <span class="panel-meta" id="output-meta"></span>
+
+                            <div class="download-wrapper" id="download-wrapper" style="display:none;">
+                            <button class="btn-download" id="btn-download" title="Download">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                     stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="7 10 12 15 17 10"/>
+                                    <line x1="12" y1="15" x2="12" y2="3"/>
+                                </svg>
+                            </button>
+                            <div class="download-menu" id="download-menu">
+                                <button class="download-option" data-format="txt">
+                                    <span class="download-ext">.txt</span>
+                                    <span class="download-desc">Plain text</span>
+                                </button>
+                                <button class="download-option" data-format="docx">
+                                    <span class="download-ext">.docx</span>
+                                    <span class="download-desc">Word document</span>
+                                </button>
+                                <button class="download-option" data-format="pdf">
+                                    <span class="download-ext">.pdf</span>
+                                    <span class="download-desc">PDF document</span>
+                                </button>
+                            </div>
+                        </div>
+
                             <button class="btn-retry" id="btn-retry" style="display:none;" title="Try again">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                                  stroke="currentColor" stroke-width="2"
@@ -143,6 +170,7 @@ Min 100 words · Max 500 words"></textarea>
                                 <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
                             </svg>
                             </button>
+                            
                             <button class="btn-copy" id="btn-copy" style="display:none;" title="Copy to clipboard">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                                      stroke="currentColor" stroke-width="2"

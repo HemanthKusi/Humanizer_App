@@ -547,6 +547,97 @@ body.premium .panel {
     to { transform: rotate(-360deg); }
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   DOWNLOAD BUTTON WITH DROPDOWN
+   ═══════════════════════════════════════════════════════════════════ */
+
+.download-wrapper {
+    position: relative;
+}
+
+.btn-download {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+}
+
+.btn-download:hover {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* Dropdown menu */
+.download-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-4px);
+    transition: all 0.2s ease;
+    z-index: 100;
+    min-width: 160px;
+}
+
+body.premium .download-menu {
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4), 0 0 20px rgba(240,160,48,0.05);
+}
+
+.download-menu.open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.download-option {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0.55rem 0.85rem;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    font-family: var(--font-body);
+    text-align: left;
+    transition: background 0.15s ease;
+}
+
+.download-option:last-child {
+    border-bottom: none;
+}
+
+.download-option:hover {
+    background: var(--accent-soft);
+}
+
+.download-ext {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--accent);
+    min-width: 36px;
+}
+
+.download-desc {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+}
+
 
 /* ═══════════════════════════════════════════════════════════════════
    ACTION BAR — REWRITE BUTTON (SEPARATED FROM PANELS)

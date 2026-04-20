@@ -419,6 +419,10 @@ let lastRequestText = '';
 let lastRequestTime = 0;
 const REQUEST_COOLDOWN = 3000;  /* 3 seconds between requests */
 
+const btnDownload = document.getElementById('btn-download');
+const downloadWrapper = document.getElementById('download-wrapper');
+const downloadMenu = document.getElementById('download-menu');
+
 document.querySelector('.btn-text').textContent = 'Quick Fix';
 
 
@@ -770,6 +774,8 @@ function showLoading() {
     document.querySelector('.btn-text').textContent = 'Rewriting...';
     btnCopy.style.display = 'none';
     btnRetry.style.display = 'none';
+    downloadWrapper.style.display = 'none';
+    downloadMenu.classList.remove('open');
     outputMeta.textContent = '';
     resultStats.style.display = 'none';
 
@@ -838,6 +844,7 @@ function showResult(result) {
 
     btnCopy.style.display = 'flex';
     btnRetry.style.display = toggleDeep.checked ? 'flex' : 'none';
+    downloadWrapper.style.display = 'flex';
 
     /* Refresh usage counter */
     updateUsage();
@@ -848,6 +855,7 @@ function showError(message, flaggedWords, field) {
     document.querySelector('.btn-text').textContent = toggleDeep.checked ? 'Deep Rewrite' : 'Quick Fix';
     resultStats.style.display = 'none';
     btnRetry.style.display = 'none';
+    downloadWrapper.style.display = 'none';
 
     outputArea.innerHTML = `
         <div class="output-placeholder" style="color: #dc2626;">
@@ -1017,6 +1025,89 @@ btnRetry.addEventListener('click', async function () {
             error.field || 'input'
         );
     }
+});
+
+/* ═══════════════════════════════════════════════════════════════════
+   DOWNLOAD WITH FORMAT MENU
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Toggle the dropdown menu */
+btnDownload.addEventListener('click', function (e) {
+    e.stopPropagation();
+    downloadMenu.classList.toggle('open');
+});
+
+/* Close menu when clicking anywhere else */
+document.addEventListener('click', function () {
+    downloadMenu.classList.remove('open');
+});
+
+/* Prevent menu clicks from closing the menu */
+downloadMenu.addEventListener('click', function (e) {
+    e.stopPropagation();
+});
+
+/* Handle format selection */
+document.querySelectorAll('.download-option').forEach(function (btn) {
+    btn.addEventListener('click', async function () {
+        const format = this.getAttribute('data-format');
+        const outputText = document.getElementById('output-text');
+        if (!outputText) return;
+
+        const text = outputText.textContent;
+
+        /* Close the menu */
+        downloadMenu.classList.remove('open');
+
+        if (format === 'txt') {
+            /* TXT — handle in frontend, no server needed */
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'rewright-output.txt';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            showToast('Downloaded .txt');
+        } else {
+            /* DOCX and PDF — request from backend */
+            try {
+                showToast('Preparing download...');
+
+                const response = await fetch('/api/download/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken(),
+                    },
+                    body: JSON.stringify({ text, format }),
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.error || 'Download failed');
+                }
+
+                /* Convert response to blob and download */
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `rewright-output.${format}`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+
+                showToast(`Downloaded .${format}`);
+            } catch (error) {
+                console.error('Download failed:', error);
+                showToast('Download failed. Try .txt instead.');
+            }
+        }
+    });
 });
 
 

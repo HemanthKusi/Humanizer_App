@@ -28,4 +28,7 @@ urlpatterns = [
     # API endpoint — returns usage stats for the current user
     # This is used by the frontend to show usage info on the homepage
     path('api/usage/', views.usage, name='usage'),
+    # API endpoint — generates a downloadable file from the rewritten text
+    # This is called when the user clicks "Download" after rewriting.
+    path('api/download/', views.download, name='download'),
 ]

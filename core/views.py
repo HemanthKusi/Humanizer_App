@@ -292,3 +292,101 @@ def usage(request: HttpRequest) -> JsonResponse:
         'hourly': {'used': hourly_count, 'limit': 25},
         'daily': {'used': daily_count, 'limit': 40},
     })
+
+def download(request: HttpRequest) -> HttpResponse:
+    """
+    API endpoint: generates a downloadable file from the rewritten text.
+
+    Accepts POST with:
+        { "text": "...", "format": "txt" | "docx" | "pdf" }
+
+    Returns the file as a download response.
+    """
+    import json
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    try:
+        body = json.loads(request.body.decode('utf-8'))
+        text = body.get('text', '').strip()
+        file_format = body.get('format', 'txt').lower()
+
+        if not text:
+            return JsonResponse({'error': 'No text to download'}, status=400)
+
+        if file_format == 'txt':
+            response = HttpResponse(text, content_type='text/plain; charset=utf-8')
+            response['Content-Disposition'] = 'attachment; filename="rewright-output.txt"'
+            return response
+
+        elif file_format == 'docx':
+            from docx import Document
+            from docx.shared import Pt, Inches
+            from io import BytesIO
+
+            doc = Document()
+
+            # Set default font
+            style = doc.styles['Normal']
+            font = style.font
+            font.name = 'Calibri'
+            font.size = Pt(11)
+
+            # Add paragraphs (split by double newlines)
+            paragraphs = text.split('\n\n')
+            for i, para_text in enumerate(paragraphs):
+                para_text = para_text.strip()
+                if para_text:
+                    # Replace single newlines with spaces within paragraphs
+                    para_text = para_text.replace('\n', ' ')
+                    doc.add_paragraph(para_text)
+
+            # Save to bytes
+            buffer = BytesIO()
+            doc.save(buffer)
+            buffer.seek(0)
+
+            response = HttpResponse(
+                buffer.getvalue(),
+                content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            )
+            response['Content-Disposition'] = 'attachment; filename="rewright-output.docx"'
+            return response
+
+        elif file_format == 'pdf':
+            from fpdf import FPDF
+            from io import BytesIO
+
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_auto_page_break(auto=True, margin=25)
+            pdf.set_font('Helvetica', size=11)
+
+            # Add text line by line
+            paragraphs = text.split('\n\n')
+            for i, para_text in enumerate(paragraphs):
+                para_text = para_text.strip()
+                if para_text:
+                    para_text = para_text.replace('\n', ' ')
+                    pdf.multi_cell(0, 6, para_text)
+                    pdf.ln(4)  # Space between paragraphs
+
+            buffer = BytesIO()
+            pdf.output(buffer)
+            buffer.seek(0)
+
+            response = HttpResponse(
+                buffer.getvalue(),
+                content_type='application/pdf'
+            )
+            response['Content-Disposition'] = 'attachment; filename="rewright-output.pdf"'
+            return response
+
+        else:
+            return JsonResponse({'error': 'Invalid format. Use txt, docx, or pdf.'}, status=400)
+
+    except Exception as e:
+        import logging
+        logging.getLogger('api').error(f'Download failed: {str(e)}')
+        return JsonResponse({'error': 'Download failed. Please try again.'}, status=500)
