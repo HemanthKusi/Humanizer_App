@@ -516,6 +516,37 @@ body.premium .panel {
     background: rgba(22,163,74,0.08);
 }
 
+/* Try again button — same style as copy */
+.btn-retry {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+}
+
+.btn-retry:hover {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* Spin animation when re-rolling */
+.btn-retry.spinning svg {
+    animation: retrySpin 0.6s ease;
+}
+
+@keyframes retrySpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(-360deg); }
+}
+
 
 /* ═══════════════════════════════════════════════════════════════════
    ACTION BAR — REWRITE BUTTON (SEPARATED FROM PANELS)

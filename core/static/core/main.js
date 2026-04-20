@@ -413,6 +413,9 @@ const usageCounter = document.getElementById('usage-counter');
 const toneButtons = document.querySelectorAll('.tone-btn');
 let selectedTone = 'default';
 
+const btnRetry = document.getElementById('btn-retry');
+let lastRequestText = '';
+
 let lastRequestTime = 0;
 const REQUEST_COOLDOWN = 3000;  /* 3 seconds between requests */
 
@@ -766,6 +769,7 @@ function showLoading() {
     btnRewrite.disabled = true;
     document.querySelector('.btn-text').textContent = 'Rewriting...';
     btnCopy.style.display = 'none';
+    btnRetry.style.display = 'none';
     outputMeta.textContent = '';
     resultStats.style.display = 'none';
 
@@ -787,7 +791,7 @@ function showLoading() {
             };
             message = `Rewriting in ${toneNames[selectedTone] || selectedTone} style...`;
         } else {
-            message = 'Rewriting with AI...';
+            message = 'Rewriting your text...';
         }
     }
 
@@ -809,6 +813,7 @@ function showLoading() {
 
 function showResult(result) {
     btnRewrite.disabled = false;
+    lastRequestText = inputText.value.trim();
     document.querySelector('.btn-text').textContent = toggleDeep.checked ? 'Deep Rewrite' : 'Quick Fix';
 
     /* Output text */
@@ -832,6 +837,7 @@ function showResult(result) {
     resultStats.style.display = 'block';
 
     btnCopy.style.display = 'flex';
+    btnRetry.style.display = toggleDeep.checked ? 'flex' : 'none';
 
     /* Refresh usage counter */
     updateUsage();
@@ -841,6 +847,7 @@ function showError(message, flaggedWords, field) {
     btnRewrite.disabled = false;
     document.querySelector('.btn-text').textContent = toggleDeep.checked ? 'Deep Rewrite' : 'Quick Fix';
     resultStats.style.display = 'none';
+    btnRetry.style.display = 'none';
 
     outputArea.innerHTML = `
         <div class="output-placeholder" style="color: #dc2626;">
@@ -982,6 +989,33 @@ btnCopy.addEventListener('click', async function () {
         showToast('Copied to clipboard');
     } catch (error) {
         showToast('Could not copy — select manually');
+    }
+});
+
+/* ═══════════════════════════════════════════════════════════════════
+   RE-ROLL / TRY AGAIN
+   ═══════════════════════════════════════════════════════════════════ */
+
+btnRetry.addEventListener('click', async function () {
+    if (!lastRequestText) return;
+
+    /* Spin animation */
+    btnRetry.classList.add('spinning');
+    setTimeout(function () { btnRetry.classList.remove('spinning'); }, 600);
+
+    /* Re-send the same text with same settings */
+    showLoading();
+
+    try {
+        const result = await callAPI(lastRequestText);
+        showResult(result);
+    } catch (error) {
+        console.error('Re-roll failed:', error);
+        showError(
+            error.message,
+            error.flaggedWords || null,
+            error.field || 'input'
+        );
     }
 });
 
