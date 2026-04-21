@@ -423,6 +423,11 @@ const btnDownload = document.getElementById('btn-download');
 const downloadWrapper = document.getElementById('download-wrapper');
 const downloadMenu = document.getElementById('download-menu');
 
+const historySection = document.getElementById('history-section');
+const historyList = document.getElementById('history-list');
+const historyClear = document.getElementById('history-clear');
+const MAX_HISTORY = 5;
+
 document.querySelector('.btn-text').textContent = 'Quick Fix';
 
 
@@ -848,6 +853,14 @@ function showResult(result) {
 
     /* Refresh usage counter */
     updateUsage();
+
+    /* Save to session history */
+    saveToHistory(
+        inputText.value.trim(),
+        result.text,
+        toggleDeep.checked ? 'Deep Rewrite' : 'Quick Fix',
+        selectedTone
+    );
 }
 
 function showError(message, flaggedWords, field) {
@@ -1109,6 +1122,217 @@ document.querySelectorAll('.download-option').forEach(function (btn) {
         }
     });
 });
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   SESSION HISTORY — VERTICAL SIDEBAR
+   ═══════════════════════════════════════════════════════════════════ */
+
+/**
+ * Save a rewrite result to session history.
+ */
+function saveToHistory(input, output, mode, tone) {
+    let history = [];
+    try {
+        const stored = sessionStorage.getItem('rewright-history');
+        if (stored) history = JSON.parse(stored);
+    } catch (e) { }
+
+    const entry = {
+        input: input,
+        output: output,
+        mode: mode,
+        tone: tone,
+        timestamp: Date.now(),
+        inputWords: input.trim().split(/\s+/).length,
+        outputWords: output.trim().split(/\s+/).length,
+    };
+
+    history.unshift(entry);
+
+    if (history.length > MAX_HISTORY) {
+        history = history.slice(0, MAX_HISTORY);
+    }
+
+    try {
+        sessionStorage.setItem('rewright-history', JSON.stringify(history));
+    } catch (e) { }
+
+    renderHistory(history);
+}
+
+/**
+ * Load history from sessionStorage on page load.
+ */
+function loadHistory() {
+    try {
+        const stored = sessionStorage.getItem('rewright-history');
+        if (stored) {
+            const history = JSON.parse(stored);
+            renderHistory(history);
+        } else {
+            historyList.innerHTML = renderEmptyHistory();
+            historyClear.style.display = 'none';
+        }
+    } catch (e) {
+        historyList.innerHTML = renderEmptyHistory();
+        historyClear.style.display = 'none';
+    }
+}
+
+/**
+ * Returns HTML for the empty history state.
+ */
+function renderEmptyHistory() {
+    return '<div class="history-empty">No recent history</div>';
+}
+
+/**
+ * Render history items as vertical cards in the sidebar.
+ */
+function renderHistory(history) {
+    if (!history || history.length === 0) {
+        historyList.innerHTML = renderEmptyHistory();
+        historyClear.style.display = 'none';
+        return;
+    }
+
+    historyClear.style.display = 'flex';
+
+    let html = '';
+    for (let i = 0; i < history.length; i++) {
+        const entry = history[i];
+        const ago = getTimeAgo(entry.timestamp);
+        const preview = entry.output.substring(0, 80).replace(/\n/g, ' ');
+
+        const modeLabel = entry.mode === 'Quick Fix' ? 'Quick Fix' : 'Deep Rewrite';
+        const toneLabel = entry.tone && entry.tone !== 'default'
+            ? ` · ${entry.tone}`
+            : '';
+
+        html += `
+            <div class="history-item" data-index="${i}" title="Click to load this result">
+                <div class="history-preview">${escapeHtml(preview)}...</div>
+                <div class="history-bottom">
+                    <span class="history-mode">${modeLabel}${toneLabel}</span>
+                    <span class="history-time">${ago}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    historyList.innerHTML = html;
+
+    historyList.querySelectorAll('.history-item').forEach(function (item) {
+        item.addEventListener('click', function () {
+            const index = parseInt(this.getAttribute('data-index'));
+            loadHistoryItem(index);
+
+            historyList.querySelectorAll('.history-item').forEach(function (el) {
+                el.classList.remove('active');
+            });
+            this.classList.add('active');
+        });
+    });
+}
+
+/**
+ * Load a history item into the panels.
+ */
+function loadHistoryItem(index) {
+    try {
+        const stored = sessionStorage.getItem('rewright-history');
+        if (!stored) return;
+
+        const history = JSON.parse(stored);
+        const entry = history[index];
+        if (!entry) return;
+
+        inputText.value = entry.input;
+        inputText.dispatchEvent(new Event('input'));
+
+        outputArea.innerHTML = `<div id="output-text">${escapeHtml(entry.output)}</div>`;
+
+        updateOutputMeta(entry.output);
+
+        btnCopy.style.display = 'flex';
+        btnRetry.style.display = entry.mode === 'Deep Rewrite' ? 'flex' : 'none';
+        downloadWrapper.style.display = 'flex';
+
+        resultStats.innerHTML = `
+            <span>${entry.inputWords}</span> → <span>${entry.outputWords}</span> words
+        `;
+        resultStats.style.display = 'block';
+
+        showToast('Loaded from history');
+    } catch (e) {
+        console.error('Failed to load history item:', e);
+    }
+}
+
+/**
+ * Get a human-readable time ago string.
+ */
+function getTimeAgo(timestamp) {
+    const seconds = Math.floor((Date.now() - timestamp) / 1000);
+    if (seconds < 30) return 'just now';
+    if (seconds < 60) return seconds + 's ago';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return minutes + 'm ago';
+    const hours = Math.floor(minutes / 60);
+    return hours + 'h ago';
+}
+
+/* Toggle history open/close */
+const historyToggle = document.getElementById('history-toggle');
+
+historyToggle.addEventListener('click', function () {
+    historySection.classList.toggle('open');
+});
+
+/* Clear history with Yes/No confirmation */
+historyClear.addEventListener('click', function (e) {
+    e.stopPropagation();
+
+    /* If already showing confirmation, ignore */
+    if (document.querySelector('.history-confirm')) return;
+
+    /* Hide the clear button */
+    this.style.display = 'none';
+
+    /* Show confirmation inline */
+    const confirm = document.createElement('div');
+    confirm.className = 'history-confirm';
+    confirm.innerHTML = `
+        <span class="confirm-text">Clear all history?</span>
+        <div class="confirm-buttons">
+            <button class="confirm-yes" id="confirm-yes">Yes</button>
+            <button class="confirm-no" id="confirm-no">No</button>
+        </div>
+    `;
+
+    this.parentElement.appendChild(confirm);
+
+    /* Yes — clear everything */
+    confirm.querySelector('.confirm-yes').addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        sessionStorage.removeItem('rewright-history');
+        historyList.innerHTML = renderEmptyHistory();
+        confirm.remove();
+        historyClear.style.display = 'none';
+        showToast('History cleared');
+    });
+
+    /* No — cancel */
+    confirm.querySelector('.confirm-no').addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        confirm.remove();
+        historyClear.style.display = 'flex';
+    });
+});
+
+/* Load history on page load */
+loadHistory();
 
 
 /* ═══════════════════════════════════════════════════════════════════

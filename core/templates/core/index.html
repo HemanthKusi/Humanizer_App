@@ -37,6 +37,28 @@
         </a>
     </header>
 
+    <!-- History sidebar — fixed on the right side under logo -->
+    <div class="history-panel" id="history-section">
+        <button class="history-toggle" id="history-toggle">
+            <span class="history-label">Recent History</span>
+            <span class="history-arrow" id="history-arrow">▾</span>
+        </button>
+        <div class="history-body" id="history-body">
+            <div class="history-list" id="history-list"></div>
+            <button class="history-clear" id="history-clear">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                    <path d="M10 11v6"/>
+                    <path d="M14 11v6"/>
+                </svg>
+                <span>Clear all</span>
+            </button>
+        </div>
+    </div>
+
     <!-- ─── MAIN ────────────────────────────────────── -->
     <main>
 
@@ -170,7 +192,7 @@ Min 100 words · Max 500 words"></textarea>
                                 <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
                             </svg>
                             </button>
-                            
+
                             <button class="btn-copy" id="btn-copy" style="display:none;" title="Copy to clipboard">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                                      stroke="currentColor" stroke-width="2"
