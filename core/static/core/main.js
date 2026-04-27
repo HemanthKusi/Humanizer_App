@@ -859,7 +859,8 @@ function showResult(result) {
         inputText.value.trim(),
         result.text,
         toggleDeep.checked ? 'Deep Rewrite' : 'Quick Fix',
-        selectedTone
+        selectedTone,
+        voiceSample.value.trim()
     );
 }
 
@@ -1131,7 +1132,7 @@ document.querySelectorAll('.download-option').forEach(function (btn) {
 /**
  * Save a rewrite result to session history.
  */
-function saveToHistory(input, output, mode, tone) {
+function saveToHistory(input, output, mode, tone, voice) {
     let history = [];
     try {
         const stored = sessionStorage.getItem('rewright-history');
@@ -1143,6 +1144,7 @@ function saveToHistory(input, output, mode, tone) {
         output: output,
         mode: mode,
         tone: tone,
+        voice: voice || '',
         timestamp: Date.now(),
         inputWords: input.trim().split(/\s+/).length,
         outputWords: output.trim().split(/\s+/).length,
@@ -1248,17 +1250,56 @@ function loadHistoryItem(index) {
         const entry = history[index];
         if (!entry) return;
 
+        /* ── Restore mode (Quick Fix / Deep Rewrite) ── */
+        const needsDeep = entry.mode === 'Deep Rewrite';
+
+        if (needsDeep && !toggleDeep.checked) {
+            toggleDeep.checked = true;
+            toggleDeep.dispatchEvent(new Event('change'));
+        } else if (!needsDeep && toggleDeep.checked) {
+            toggleDeep.checked = false;
+            toggleDeep.dispatchEvent(new Event('change'));
+        }
+
+        /* ── Restore tone ── */
+        if (needsDeep && entry.tone) {
+            selectedTone = entry.tone;
+            toneButtons.forEach(function (btn) {
+                btn.classList.remove('active');
+                if (btn.getAttribute('data-tone') === entry.tone) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+        /* ── Restore voice sample ── */
+        if (needsDeep && entry.voice && entry.voice.length > 0) {
+            voiceSample.value = entry.voice;
+            voiceSample.dispatchEvent(new Event('input'));
+            /* Open the voice section so user can see it's loaded */
+            if (!voiceSection.classList.contains('open')) {
+                voiceSection.classList.toggle('open');
+            }
+        } else {
+            voiceSample.value = '';
+            voiceSample.dispatchEvent(new Event('input'));
+            voiceSection.classList.remove('open');
+        }
+
+        /* ── Restore input text ── */
         inputText.value = entry.input;
         inputText.dispatchEvent(new Event('input'));
 
+        /* ── Restore output ── */
         outputArea.innerHTML = `<div id="output-text">${escapeHtml(entry.output)}</div>`;
-
         updateOutputMeta(entry.output);
 
+        /* ── Restore buttons ── */
         btnCopy.style.display = 'flex';
-        btnRetry.style.display = entry.mode === 'Deep Rewrite' ? 'flex' : 'none';
+        btnRetry.style.display = needsDeep ? 'flex' : 'none';
         downloadWrapper.style.display = 'flex';
 
+        /* ── Restore stats ── */
         resultStats.innerHTML = `
             <span>${entry.inputWords}</span> → <span>${entry.outputWords}</span> words
         `;
@@ -1403,3 +1444,106 @@ function renderUsage(data) {
 
 /* Fetch usage on page load */
 updateUsage();
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   KEYBOARD SHORTCUTS
+
+   Ctrl+Enter / Cmd+Enter  → Rewrite
+   Ctrl+Shift+C            → Copy result
+   Ctrl+Shift+D            → Open download menu
+   Ctrl+Shift+R            → Re-roll (Deep Rewrite only)
+   Escape                  → Close menus
+   ═══════════════════════════════════════════════════════════════════ */
+
+document.addEventListener('keydown', function (e) {
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+
+    /* Don't intercept other shortcuts if user is typing */
+    const isTyping = document.activeElement.tagName === 'TEXTAREA';
+
+    /* ── REWRITE: Cmd+Enter (Mac) / Ctrl+Enter (Windows) ── */
+    if ((isMac ? e.metaKey : e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (!btnRewrite.disabled) {
+            btnRewrite.click();
+        }
+        return;
+    }
+
+    /* Skip other shortcuts if typing in a textarea */
+    if (isTyping) return;
+
+    /*
+     * Mac: Ctrl + key (Ctrl is free on Mac, browsers use Cmd)
+     * Windows: Ctrl + Shift + key (Ctrl alone is used by browsers)
+     */
+    const shortcutActive = isMac
+        ? (e.ctrlKey && !e.metaKey && !e.shiftKey)
+        : (e.ctrlKey && e.shiftKey && !e.metaKey);
+
+    if (!shortcutActive) return;
+
+    const key = e.key.toLowerCase();
+
+    /* Copy result */
+    if (key === 'c') {
+        if (btnCopy.style.display !== 'none') {
+            e.preventDefault();
+            btnCopy.click();
+        }
+        return;
+    }
+
+    /* Toggle download menu */
+    if (key === 'd') {
+        e.preventDefault();
+        if (downloadWrapper.style.display !== 'none') {
+            downloadMenu.classList.toggle('open');
+        }
+        return;
+    }
+
+    /* Re-roll */
+    if (key === 'r') {
+        e.preventDefault();
+        if (btnRetry.style.display !== 'none') {
+            btnRetry.click();
+        }
+        return;
+    }
+
+    /* Toggle history */
+    if (key === 'h') {
+        e.preventDefault();
+        historySection.classList.toggle('open');
+        return;
+    }
+
+    /* Toggle mode (Space) */
+    if (e.key === ' ') {
+        e.preventDefault();
+        toggleDeep.checked = !toggleDeep.checked;
+        toggleDeep.dispatchEvent(new Event('change'));
+        return;
+    }
+
+    /* Escape — always active */
+    if (e.key === 'Escape') {
+        downloadMenu.classList.remove('open');
+        if (historySection.classList.contains('open')) {
+            historySection.classList.remove('open');
+        }
+        return;
+    }
+});
+
+/* Escape needs to work outside the shortcutActive check */
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+        downloadMenu.classList.remove('open');
+        if (historySection.classList.contains('open')) {
+            historySection.classList.remove('open');
+        }
+    }
+});
