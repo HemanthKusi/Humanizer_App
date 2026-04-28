@@ -32,6 +32,8 @@ from core.sanitizer import sanitize_input
 
 from core.middleware import request_tracker
 
+from .readability import flesch_reading_ease
+
 def track_usage(request):
     """
     Record a successful request in the rate limiter's tracker.
@@ -179,10 +181,18 @@ def humanize(request: HttpRequest) -> JsonResponse:
                 f'patterns={len(rule_result["changes"])} | '
                 f'duration={duration}s'
             )
+            # Calculate readability before and after
+            original_readability = flesch_reading_ease(text)
+            final_readability = flesch_reading_ease(rule_result['text'])
+
             return JsonResponse({
                 'text': rule_result['text'],
                 'changes': rule_result['changes'],
                 'stats': rule_result['stats'],
+                'readability': {
+                    'original': original_readability,
+                    'final': final_readability,
+                },
                 'mode': 'rule-based',
             })
 
@@ -232,10 +242,18 @@ def humanize(request: HttpRequest) -> JsonResponse:
             f'duration={duration}s'
         )
 
+        # Calculate readability before and after
+        original_readability = flesch_reading_ease(text)
+        final_readability = flesch_reading_ease(llm_result['text'])
+
         return JsonResponse({
             'text': llm_result['text'],
             'changes': rule_result['changes'],
             'stats': stats,
+            'readability': {
+                'original': original_readability,
+                'final': final_readability,
+            },
             'mode': f"AI editor ({llm_result['model']})",
         })
 
