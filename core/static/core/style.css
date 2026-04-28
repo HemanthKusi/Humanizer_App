@@ -1844,3 +1844,82 @@ body.premium .nav-link:hover {
 body.premium .nav-signup {
     color: #fff;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   GOOGLE SIGN-IN BUTTON & DIVIDER
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* "or" divider between form and Google button */
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+.auth-divider span {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Google button */
+.btn-google {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0.7rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-google:hover {
+    background: var(--bg-secondary);
+    border-color: var(--text-secondary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.btn-google svg {
+    flex-shrink: 0;
+}
+
+/* Dark mode */
+body.premium .btn-google {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+}
+
+body.premium .btn-google:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+body.premium .auth-divider::before,
+body.premium .auth-divider::after {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+body.premium .auth-divider span {
+    color: rgba(255, 255, 255, 0.4);
+}

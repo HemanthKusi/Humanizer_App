@@ -18,6 +18,10 @@ urlpatterns = [
     # Django's built-in admin panel at /admin/
     path('admin/', admin.site.urls),
 
+    # Allauth social auth URLs (handles Google OAuth callback)
+    # This gives us /accounts/google/login/ and /accounts/google/login/callback/
+    path('accounts/', include('allauth.urls')),
+
     # Everything else goes to our core app's urls.py
     # include() means "go look in core/urls.py for more routes"
     path('', include('core.urls')),

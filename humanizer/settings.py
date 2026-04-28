@@ -49,7 +49,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',   # Session management
     'django.contrib.messages',   # Flash messages
     'django.contrib.staticfiles',# CSS, JS, images
-    'core',                      # Our main app (we just created this)
+    'django.contrib.sites',      # Required by allauth — manages site domain info
+
+    # Allauth apps
+    'allauth',                          # Core allauth
+    'allauth.account',                  # Email/password auth (allauth's version)
+    'allauth.socialaccount',            # Social auth base
+    'allauth.socialaccount.providers.google',  # Google provider
+
+    'core',                      # Our main app
 ]
 
 # ─── SECURITY HEADERS ───────────────────────────────────────────
@@ -91,6 +99,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',  # CSRF protection (important for forms)
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
@@ -293,11 +302,63 @@ LOGGING = {
 
 # ─── AUTHENTICATION ──────────────────────────────────────────────────────────
 #
-# Django's auth system settings.
-# LOGIN_URL: where unauthenticated users get redirected
-# LOGIN_REDIRECT_URL: where users go after successful login
-# LOGOUT_REDIRECT_URL: where users go after logging out
+# Django's auth system + django-allauth for Google Sign-In.
+#
+# How it works:
+# 1. User clicks "Sign in with Google" on our login page
+# 2. They get redirected to Google's OAuth consent screen
+# 3. Google redirects back to our callback URL with a token
+# 4. allauth verifies the token, creates/links the user account
+# 5. User is logged in and redirected to the homepage
 
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
+
+# Required by django.contrib.sites — allauth uses this
+# to know which domain it's running on
+SITE_ID = 1
+
+# Authentication backends — Django checks these in order
+# when authenticating a user
+AUTHENTICATION_BACKENDS = [
+    # Default Django backend — handles username/password login
+    'django.contrib.auth.backends.ModelBackend',
+    # Allauth backend — handles social login (Google, etc.)
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+# ── Allauth settings ──
+
+# Use our custom login/signup pages, not allauth's built-in ones
+ACCOUNT_LOGIN_URL = '/login/'
+ACCOUNT_SIGNUP_URL = '/signup/'
+
+# After social login, redirect to homepage
+SOCIALACCOUNT_LOGIN_ON_GET = True
+
+# Don't ask for extra info after Google sign-in
+# Just create the account and log them in
+SOCIALACCOUNT_AUTO_SIGNUP = True
+
+# Use email as the primary identifier
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = True
+ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
+
+# Don't send email verification (we can add this later)
+ACCOUNT_EMAIL_VERIFICATION = 'none'
+
+# Google provider settings — reads from .env
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'APP': {
+            'client_id': os.environ.get('GOOGLE_CLIENT_ID', ''),
+            'secret': os.environ.get('GOOGLE_CLIENT_SECRET', ''),
+        },
+        'SCOPE': ['profile', 'email'],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+    },
+}
