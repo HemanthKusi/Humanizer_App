@@ -290,3 +290,14 @@ LOGGING = {
         },
     },
 }
+
+# ─── AUTHENTICATION ──────────────────────────────────────────────────────────
+#
+# Django's auth system settings.
+# LOGIN_URL: where unauthenticated users get redirected
+# LOGIN_REDIRECT_URL: where users go after successful login
+# LOGOUT_REDIRECT_URL: where users go after logging out
+
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
