@@ -38,6 +38,9 @@ urlpatterns = [
     # Logout action (POST only for security)
     # The user sees this when they click "Log Out" on their profile.
     path('logout/', views.logout_view, name='logout'),
+    # Profile page
+    # The user sees this when they click "Profile" on the homepage.
+    path('profile/', views.profile_view, name='profile'),
 
     # ── API endpoints ──
 

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile — Rewright</title>
+    <link rel="icon" href="{% static 'core/favicon.svg' %}" type="image/svg+xml">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="{% static 'core/style.css' %}">
+</head>
+<body>
+
+    <!-- Backgrounds -->
+    <canvas id="solar-system"></canvas>
+    <div class="bg-aurora"></div>
+    <div class="bg-grain"></div>
+
+    <!-- ─── HEADER ──────────────────────────────────── -->
+    <header>
+        <a href="/" class="logo">
+            <div class="logo-mark">
+                <svg width="40" height="40" viewBox="0 0 32 32" fill="none">
+                    <ellipse cx="16" cy="16" rx="12" ry="12" stroke="var(--accent)" stroke-width="1" opacity="0.2"/>
+                    <ellipse cx="16" cy="16" rx="12" ry="5" stroke="var(--accent)" stroke-width="0.8" opacity="0.15" transform="rotate(-20 16 16)"/>
+                    <circle cx="16" cy="16" r="4.5" fill="var(--accent)"/>
+                    <circle cx="14.5" cy="14.5" r="2" fill="white" opacity="0.3"/>
+                    <circle cx="16" cy="16" r="2" fill="var(--accent)" opacity="0.8" class="logo-planet"/>
+                </svg>
+            </div>
+            <span class="logo-text">Rewright</span>
+        </a>
+
+        <nav class="header-nav">
+            <a href="{% url 'profile' %}" class="nav-link nav-active">Profile</a>
+            <form method="POST" action="{% url 'logout' %}" class="nav-logout-form">
+                {% csrf_token %}
+                <button type="submit" class="nav-link nav-logout">Log out</button>
+            </form>
+        </nav>
+    </header>
+
+    <!-- ─── PROFILE CONTENT ─────────────────────────── -->
+    <main class="auth-main">
+        <div class="profile-container">
+
+            <!-- ── Account Info ── -->
+            <div class="profile-card">
+                <h2 class="profile-card-title">Account</h2>
+
+                <div class="profile-info">
+                    <div class="profile-info-row">
+                        <span class="profile-info-label">Username</span>
+                        <span class="profile-info-value">{{ user.username }}</span>
+                    </div>
+                    <div class="profile-info-row">
+                        <span class="profile-info-label">Email</span>
+                        <span class="profile-info-value">{{ user.email }}</span>
+                    </div>
+                    <div class="profile-info-row">
+                        <span class="profile-info-label">Joined</span>
+                        <span class="profile-info-value">{{ user.date_joined|date:"F j, Y" }}</span>
+                    </div>
+                    <div class="profile-info-row">
+                        <span class="profile-info-label">Last login</span>
+                        <span class="profile-info-value">{{ user.last_login|date:"F j, Y · g:i A" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Edit Name ── -->
+            <div class="profile-card">
+                <h2 class="profile-card-title">Edit profile</h2>
+
+                {% if edit_success %}
+                    <div class="profile-success">Profile updated successfully.</div>
+                {% endif %}
+
+                <form method="POST" action="{% url 'profile' %}" class="profile-form" novalidate>
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="edit_profile">
+
+                    <div class="form-group {% if edit_form.first_name.errors %}has-error{% endif %}">
+                        <label for="id_first_name">First name</label>
+                        {{ edit_form.first_name }}
+                        {% if edit_form.first_name.errors %}
+                            <span class="field-error">{{ edit_form.first_name.errors.0 }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group {% if edit_form.last_name.errors %}has-error{% endif %}">
+                        <label for="id_last_name">Last name</label>
+                        {{ edit_form.last_name }}
+                        {% if edit_form.last_name.errors %}
+                            <span class="field-error">{{ edit_form.last_name.errors.0 }}</span>
+                        {% endif %}
+                    </div>
+
+                    <button type="submit" class="profile-submit">Save changes</button>
+                </form>
+            </div>
+
+            <!-- ── Change Password (only for users with passwords, not Google-only) ── -->
+            {% if has_password %}
+            <div class="profile-card">
+                <h2 class="profile-card-title">Change password</h2>
+
+                {% if password_success %}
+                    <div class="profile-success">Password changed successfully.</div>
+                {% endif %}
+
+                <form method="POST" action="{% url 'profile' %}" class="profile-form" novalidate>
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="change_password">
+
+                    <div class="form-group {% if password_form.current_password.errors %}has-error{% endif %}">
+                        <label for="id_current_password">Current password</label>
+                        {{ password_form.current_password }}
+                        {% if password_form.current_password.errors %}
+                            <span class="field-error">{{ password_form.current_password.errors.0 }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group {% if password_form.new_password.errors %}has-error{% endif %}">
+                        <label for="id_new_password">New password</label>
+                        {{ password_form.new_password }}
+                        {% if password_form.new_password.errors %}
+                            <span class="field-error">{{ password_form.new_password.errors.0 }}</span>
+                        {% endif %}
+                        <span class="field-hint">At least 8 characters. Can't be too common or all numbers.</span>
+                    </div>
+
+                    <div class="form-group {% if password_form.confirm_new_password.errors %}has-error{% endif %}">
+                        <label for="id_confirm_new_password">Confirm new password</label>
+                        {{ password_form.confirm_new_password }}
+                        {% if password_form.confirm_new_password.errors %}
+                            <span class="field-error">{{ password_form.confirm_new_password.errors.0 }}</span>
+                        {% endif %}
+                    </div>
+
+                    <button type="submit" class="profile-submit">Change password</button>
+                </form>
+            </div>
+            {% else %}
+            <div class="profile-card">
+                <h2 class="profile-card-title">Password</h2>
+                <p class="profile-note">You signed in with Google. No password is set for this account.</p>
+            </div>
+            {% endif %}
+
+            <!-- ── Delete Account ── -->
+            <div class="profile-card profile-card-danger">
+                <h2 class="profile-card-title">Delete account</h2>
+                <p class="profile-note">This will permanently delete your account and all associated data. This action cannot be undone.</p>
+
+                <form method="POST" action="{% url 'profile' %}" class="profile-form" id="delete-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete_account">
+                    <button type="button" class="profile-delete-btn" id="btn-delete-account">Delete my account</button>
+                </form>
+
+                <!-- Confirmation dialog — hidden by default -->
+                <div class="delete-confirm" id="delete-confirm" style="display:none;">
+                    <p class="delete-confirm-text">Are you sure? Type <strong>delete</strong> to confirm.</p>
+                    <input type="text" class="delete-confirm-input" id="delete-confirm-input" placeholder="Type 'delete' here">
+                    <div class="delete-confirm-buttons">
+                        <button class="delete-confirm-yes" id="delete-confirm-yes" disabled>Yes, delete my account</button>
+                        <button class="delete-confirm-no" id="delete-confirm-no">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="{% static 'core/main.js' %}"></script>
+
+    <!-- Profile page inline script for delete confirmation -->
+    <script>
+        (function () {
+            const btnDelete = document.getElementById('btn-delete-account');
+            const confirmBox = document.getElementById('delete-confirm');
+            const confirmInput = document.getElementById('delete-confirm-input');
+            const confirmYes = document.getElementById('delete-confirm-yes');
+            const confirmNo = document.getElementById('delete-confirm-no');
+            const deleteForm = document.getElementById('delete-form');
+
+            if (!btnDelete) return;
+
+            /* Show confirmation when delete button is clicked */
+            btnDelete.addEventListener('click', function () {
+                btnDelete.style.display = 'none';
+                confirmBox.style.display = 'block';
+                confirmInput.focus();
+            });
+
+            /* Enable the confirm button only when user types "delete" */
+            confirmInput.addEventListener('input', function () {
+                const typed = this.value.trim().toLowerCase();
+                confirmYes.disabled = typed !== 'delete';
+            });
+
+            /* Submit the delete form */
+            confirmYes.addEventListener('click', function () {
+                if (!this.disabled) {
+                    deleteForm.submit();
+                }
+            });
+
+            /* Cancel — hide confirmation, show delete button again */
+            confirmNo.addEventListener('click', function () {
+                confirmBox.style.display = 'none';
+                btnDelete.style.display = 'inline-flex';
+                confirmInput.value = '';
+                confirmYes.disabled = true;
+            });
+        })();
+    </script>
+
+</body>
+</html>
