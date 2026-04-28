@@ -439,3 +439,169 @@ def download(request: HttpRequest) -> HttpResponse:
         import logging
         logging.getLogger('api').error(f'Download failed: {str(e)}')
         return JsonResponse({'error': 'Download failed. Please try again.'}, status=500)
+    
+# ═══════════════════════════════════════════════════════════════════
+# AUTHENTICATION VIEWS
+# ═══════════════════════════════════════════════════════════════════
+
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import User
+from django.shortcuts import redirect
+from .forms import SignUpForm, LoginForm
+
+
+def signup_view(request: HttpRequest) -> HttpResponse:
+    """
+    Handle user registration.
+
+    GET:  Show the signup form
+    POST: Validate the form, create the user, log them in, redirect to homepage
+
+    How it works:
+    1. User fills out username, email, password, confirm password
+    2. Django validates all fields (our custom rules + built-in password validators)
+    3. If valid: create the User object, hash the password, log them in automatically
+    4. If invalid: re-render the form with error messages next to the bad fields
+
+    Args:
+        request: The incoming HTTP request
+
+    Returns:
+        GET:  Rendered signup.html with empty form
+        POST (valid): Redirect to homepage (user is now logged in)
+        POST (invalid): Rendered signup.html with form errors
+    """
+    # If user is already logged in, send them to homepage
+    if request.user.is_authenticated:
+        return redirect('index')
+
+    if request.method == 'POST':
+        form = SignUpForm(request.POST)
+
+        if form.is_valid():
+            # Create the user
+            # create_user() handles password hashing automatically
+            # NEVER store raw passwords — Django hashes with PBKDF2
+            user = User.objects.create_user(
+                username=form.cleaned_data['username'],
+                email=form.cleaned_data['email'],
+                password=form.cleaned_data['password'],
+            )
+
+            # Log the user in immediately after signup
+            # No need to make them go to a separate login page
+            login(request, user)
+
+            api_logger.info(
+                f'SIGNUP | user={user.username} | email={user.email} | '
+                f'ip={request.META.get("REMOTE_ADDR")}'
+            )
+
+            return redirect('index')
+    else:
+        # GET request — show empty form
+        form = SignUpForm()
+
+    return render(request, 'core/signup.html', {'form': form})
+
+
+def login_view(request: HttpRequest) -> HttpResponse:
+    """
+    Handle user login.
+
+    GET:  Show the login form
+    POST: Validate credentials, log the user in, redirect to homepage
+
+    Supports login with either username OR email:
+    1. Check if input looks like an email (contains @)
+    2. If email: look up the username for that email, then authenticate
+    3. If username: authenticate directly
+    4. If valid: create a session and redirect
+    5. If invalid: show error message
+
+    Args:
+        request: The incoming HTTP request
+
+    Returns:
+        GET:  Rendered login.html with empty form
+        POST (valid): Redirect to homepage (user is now logged in)
+        POST (invalid): Rendered login.html with error message
+    """
+    # If user is already logged in, send them to homepage
+    if request.user.is_authenticated:
+        return redirect('index')
+
+    if request.method == 'POST':
+        form = LoginForm(request.POST)
+
+        if form.is_valid():
+            username_or_email = form.cleaned_data['username_or_email'].strip()
+            password = form.cleaned_data['password']
+
+            # Check if they entered an email (contains @)
+            if '@' in username_or_email:
+                # Look up the username for this email
+                try:
+                    user_obj = User.objects.get(email=username_or_email.lower())
+                    username = user_obj.username
+                except User.DoesNotExist:
+                    username = None
+            else:
+                username = username_or_email.lower()
+
+            # Try to authenticate
+            # authenticate() checks the password hash — returns User or None
+            if username:
+                user = authenticate(request, username=username, password=password)
+            else:
+                user = None
+
+            if user is not None:
+                # Success — create session and redirect
+                login(request, user)
+
+                api_logger.info(
+                    f'LOGIN | user={user.username} | '
+                    f'ip={request.META.get("REMOTE_ADDR")}'
+                )
+
+                # Redirect to 'next' parameter if it exists
+                # (e.g., if they were trying to access a protected page)
+                next_url = request.GET.get('next', '/')
+                return redirect(next_url)
+            else:
+                # Failed — add a non-field error
+                form.add_error(None, 'Invalid username/email or password.')
+
+                security_logger = logging.getLogger('security')
+                security_logger.warning(
+                    f'FAILED LOGIN | input={username_or_email} | '
+                    f'ip={request.META.get("REMOTE_ADDR")}'
+                )
+    else:
+        form = LoginForm()
+
+    return render(request, 'core/login.html', {'form': form})
+
+
+def logout_view(request: HttpRequest) -> HttpResponse:
+    """
+    Log the user out and redirect to homepage.
+
+    Uses POST method to prevent CSRF attacks — a malicious site
+    can't log your users out by tricking them into clicking a link.
+    GET requests are redirected to homepage without logging out.
+
+    Args:
+        request: The incoming HTTP request
+
+    Returns:
+        Redirect to homepage
+    """
+    if request.method == 'POST':
+        api_logger.info(
+            f'LOGOUT | user={request.user.username} | '
+            f'ip={request.META.get("REMOTE_ADDR")}'
+        )
+        logout(request)
+    return redirect('index')
