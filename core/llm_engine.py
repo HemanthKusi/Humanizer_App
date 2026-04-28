@@ -263,7 +263,7 @@ Expand this text to roughly 150-180% of its original length. Rules:
 # ─── API CALL FUNCTIONS ─────────────────────────────────────────────────────
 
 
-def call_openai(text, voice_sample='', tone='default'):
+def call_openai(text, voice_sample='', tone='default', language='English'):
     """
     Send text to OpenAI's API for quality rewriting.
 
@@ -275,6 +275,7 @@ def call_openai(text, voice_sample='', tone='default'):
         text (str): The original AI-generated text to rewrite
         voice_sample (str): Optional user writing sample for style matching
         tone (str): The tone to use for the rewriting (e.g., "formal", "informal")
+        language (str): The language of the text (e.g., "English", "Spanish")
 
     Returns:
         str: The rewritten text
@@ -284,6 +285,10 @@ def call_openai(text, voice_sample='', tone='default'):
     # Build the system prompt
     # Build the system prompt with optional tone and voice
     system = SYSTEM_PROMPT
+
+    # Add language instruction for non-English text
+    if language != 'English':
+        system = system + f"\n\nLANGUAGE REQUIREMENT:\nThe input text is in {language}. You MUST write your entire output in {language}. Do not translate to English. Every word of your rewrite must be in {language}."
 
     # Add tone modifier (if not default)
     tone_addition = TONE_PROMPTS.get(tone, '')
@@ -309,7 +314,7 @@ def call_openai(text, voice_sample='', tone='default'):
     return response.choices[0].message.content.strip()
 
 
-def call_anthropic(text, voice_sample='', tone='default'):
+def call_anthropic(text, voice_sample='', tone='default', language='English'):
     """
     Send text to Anthropic's Claude API for quality rewriting.
 
@@ -317,6 +322,7 @@ def call_anthropic(text, voice_sample='', tone='default'):
         text (str): The original AI-generated text to rewrite
         voice_sample (str): Optional user writing sample for style matching
         tone (str): The tone to use for the rewriting (e.g., "formal", "informal")
+        language (str): The language of the text (e.g., "English", "Spanish")
 
     Returns:
         str: The rewritten text
@@ -326,6 +332,10 @@ def call_anthropic(text, voice_sample='', tone='default'):
     client = anthropic.Anthropic()
 
     system = SYSTEM_PROMPT
+
+    # Add language instruction for non-English text
+    if language != 'English':
+        system = system + f"\n\nLANGUAGE REQUIREMENT:\nThe input text is in {language}. You MUST write your entire output in {language}. Do not translate to English. Every word of your rewrite must be in {language}."
 
     tone_addition = TONE_PROMPTS.get(tone, '')
     if tone_addition:
@@ -349,7 +359,7 @@ def call_anthropic(text, voice_sample='', tone='default'):
 # ─── MAIN ENTRY POINT ───────────────────────────────────────────────────────
 
 
-def humanize_with_llm(text, voice_sample='', tone='default'):
+def humanize_with_llm(text, voice_sample='', tone='default', language='English'):
     """
     Rewrite AI-generated text into quality human writing.
 
@@ -360,6 +370,7 @@ def humanize_with_llm(text, voice_sample='', tone='default'):
         text (str): The original AI-generated text
         voice_sample (str): Optional writing sample to match style
         tone (str): The tone to use for the rewriting (e.g., "formal", "informal")
+        language (str): The language of the text (e.g., "English", "Spanish")
 
     Returns:
         dict: {
@@ -369,9 +380,9 @@ def humanize_with_llm(text, voice_sample='', tone='default'):
         }
     """
     if LLM_PROVIDER == 'openai':
-        rewritten = call_openai(text, voice_sample, tone)
+        rewritten = call_openai(text, voice_sample, tone, language)
     elif LLM_PROVIDER == 'anthropic':
-        rewritten = call_anthropic(text, voice_sample, tone)
+        rewritten = call_anthropic(text, voice_sample, tone, language)
     else:
         raise ValueError(
             f'Unknown LLM provider: "{LLM_PROVIDER}". '

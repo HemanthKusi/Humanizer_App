@@ -34,6 +34,8 @@ from core.middleware import request_tracker
 
 from .readability import flesch_reading_ease
 
+from .language import detect_language
+
 def track_usage(request):
     """
     Record a successful request in the rate limiter's tracker.
@@ -167,11 +169,37 @@ def humanize(request: HttpRequest) -> JsonResponse:
                 status=400
             )
 
+        # ── Detect input language ──
+        language = detect_language(text)
+
+        # ── Check voice sample language matches input language ──
+        # If user provides a voice sample in a different language than
+        # their input text, the LLM gets confused trying to match
+        # an English style while writing in French. Block this early.
+        if voice_sample:
+            voice_lang = detect_language(voice_sample)
+            if not language['is_english'] or not voice_lang['is_english']:
+                if language['code'] != voice_lang['code']:
+                    return JsonResponse({
+                        'error': f"Your text is in {language['name']} but your writing sample is in {voice_lang['name']}. Please provide a writing sample in {language['name']} so the style matching works correctly.",
+                        'field': 'voice',
+                    }, status=400)
+
         # ── Step 1: Always run rule-based engine first ──
         rule_result = humanize_rule_based(text)
 
         # If toggle is OFF, return rule-based result only
         if not deep_rewrite:
+
+            # Block non-English text in Quick Fix mode
+            # Rule-based patterns are English-only, so results would be useless
+            if not language['is_english']:
+                return JsonResponse({
+                    'error': f"Quick Fix only supports English. Your text appears to be in {language['name']}. Please enable Deep Rewrite to rewrite text in other languages.",
+                    'language': language,
+                    'language_unsupported': True,
+                }, status=400)
+
             duration = round(time.time() - request_start, 2)
             track_usage(request)
             api_logger.info(
@@ -181,6 +209,7 @@ def humanize(request: HttpRequest) -> JsonResponse:
                 f'patterns={len(rule_result["changes"])} | '
                 f'duration={duration}s'
             )
+
             # Calculate readability before and after
             original_readability = flesch_reading_ease(text)
             final_readability = flesch_reading_ease(rule_result['text'])
@@ -193,12 +222,13 @@ def humanize(request: HttpRequest) -> JsonResponse:
                     'original': original_readability,
                     'final': final_readability,
                 },
+                'language': language,
                 'mode': 'rule-based',
             })
 
         # ── Step 2: Toggle is ON — send text to LLM ──
         try:
-            llm_result = humanize_with_llm(text, voice_sample=voice_sample, tone=tone)
+            llm_result = humanize_with_llm(text, voice_sample=voice_sample, tone=tone, language=language['name'])
         except Exception as llm_error:
             # Log the real error server-side for debugging
             duration = round(time.time() - request_start, 2)
@@ -254,6 +284,7 @@ def humanize(request: HttpRequest) -> JsonResponse:
                 'original': original_readability,
                 'final': final_readability,
             },
+            'language': language,
             'mode': f"AI editor ({llm_result['model']})",
         })
 
