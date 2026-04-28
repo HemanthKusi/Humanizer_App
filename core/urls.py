@@ -9,19 +9,38 @@ Django reads this after being pointed here from humanizer/urls.py.
 Pattern:
     path('url-pattern/', view_function, name='name-for-this-route')
 
-We now have two routes:
-    /              → index view (homepage)
-    /api/humanize/ → humanize view (API endpoint)
+Routes:
+    /              → Homepage
+    /signup/       → Registration page
+    /login/        → Login page
+    /logout/       → Logout action (POST only)
+    /api/humanize/ → Humanize text API
+    /api/usage/    → Usage stats API
+    /api/download/ → File download API
 """
 
 from django.urls import path
-from . import views  # Import views from this same app (the dot means "current folder")
+from . import views
 
 urlpatterns = [
+    # ── Pages ──
+
     # The empty string '' means the root URL: yoursite.com/
     # views.index is the function we will write in views.py
     # name='index' lets us refer to this URL by name in templates
     path('', views.index, name='index'),
+    # Registration page
+    # The user sees this when they click "Sign Up" on the homepage.
+    path('signup/', views.signup_view, name='signup'),
+    # Login page
+    # The user sees this when they click "Log In" on the homepage.
+    path('login/', views.login_view, name='login'),
+    # Logout action (POST only for security)
+    # The user sees this when they click "Log Out" on their profile.
+    path('logout/', views.logout_view, name='logout'),
+
+    # ── API endpoints ──
+
     # API endpoint — receives text, returns humanized JSON
     # The frontend calls this with fetch() when the user clicks Humanize
     path('api/humanize/', views.humanize, name='humanize'),
