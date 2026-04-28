@@ -185,3 +185,95 @@ class LoginForm(forms.Form):
             'autocomplete': 'current-password',
         }),
     )
+
+class EditProfileForm(forms.Form):
+    """
+    Form for editing basic profile information.
+
+    Currently only supports changing the display name.
+    Email changes are excluded for now because they'd need
+    email verification to prevent abuse.
+
+    Fields:
+        - first_name: optional display name (what others see)
+        - last_name: optional last name
+    """
+
+    first_name = forms.CharField(
+        max_length=30,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'First name',
+            'autocomplete': 'given-name',
+        }),
+    )
+
+    last_name = forms.CharField(
+        max_length=30,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Last name',
+            'autocomplete': 'family-name',
+        }),
+    )
+
+
+class ChangePasswordForm(forms.Form):
+    """
+    Form for changing password.
+
+    Requires the current password for security — so even if someone
+    gets access to a logged-in session, they can't change the password
+    without knowing the current one.
+
+    Fields:
+        - current_password: must match the user's existing password
+        - new_password: must pass Django's password validators
+        - confirm_new_password: must match new_password
+    """
+
+    current_password = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'placeholder': 'Current password',
+            'autocomplete': 'current-password',
+        }),
+    )
+
+    new_password = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'placeholder': 'New password',
+            'autocomplete': 'new-password',
+        }),
+    )
+
+    confirm_new_password = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'placeholder': 'Confirm new password',
+            'autocomplete': 'new-password',
+        }),
+    )
+
+    def clean_new_password(self):
+        """
+        Validate the new password using Django's built-in validators.
+
+        @return: The new password string
+        """
+        password = self.cleaned_data.get('new_password', '')
+        validate_password(password)
+        return password
+
+    def clean(self):
+        """
+        Cross-field validation — check that new passwords match.
+
+        @return: The full cleaned_data dictionary
+        """
+        cleaned_data = super().clean()
+        new_pass = cleaned_data.get('new_password')
+        confirm = cleaned_data.get('confirm_new_password')
+
+        if new_pass and confirm and new_pass != confirm:
+            self.add_error('confirm_new_password', 'New passwords do not match.')
+
+        return cleaned_data
