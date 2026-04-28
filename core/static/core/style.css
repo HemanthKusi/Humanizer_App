@@ -1522,3 +1522,47 @@ body.premium .history-item {
         display: none !important;
     }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   LANGUAGE WARNING
+   Friendly amber warning when non-English text is used in Quick Fix.
+   Includes a button to switch to Deep Rewrite mode.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.language-warning {
+    color: #92400e !important;
+}
+
+.language-warning p {
+    color: #92400e;
+    max-width: 360px;
+    text-align: center;
+    line-height: 1.5;
+}
+
+.btn-switch-deep {
+    margin-top: 1rem;
+    padding: 0.5rem 1.25rem;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-switch-deep:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+/* Dark mode override */
+body.premium .language-warning {
+    color: #fbbf24 !important;
+}
+
+body.premium .language-warning p {
+    color: #fbbf24;
+}

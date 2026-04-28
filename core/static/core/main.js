@@ -689,7 +689,8 @@ btnRewrite.addEventListener('click', async function () {
         showError(
             error.message,
             error.flaggedWords || null,
-            error.field || 'input'
+            error.field || 'input',
+            error.languageUnsupported || false
         );
     }
 });
@@ -764,6 +765,7 @@ async function callAPI(text) {
         const err = new Error(data.error || 'Something went wrong');
         err.flaggedWords = data.flagged_words || null;
         err.field = data.field || null;
+        err.languageUnsupported = data.language_unsupported || false;
         throw err;
     }
     return data;
@@ -864,12 +866,35 @@ function showResult(result) {
     );
 }
 
-function showError(message, flaggedWords, field) {
+function showError(message, flaggedWords, field, languageUnsupported) {
     btnRewrite.disabled = false;
     document.querySelector('.btn-text').textContent = toggleDeep.checked ? 'Deep Rewrite' : 'Quick Fix';
     resultStats.style.display = 'none';
     btnRetry.style.display = 'none';
     downloadWrapper.style.display = 'none';
+
+    /* Language warning gets a friendlier look with a switch-mode hint */
+    if (languageUnsupported) {
+        outputArea.innerHTML = `
+            <div class="output-placeholder language-warning">
+                <div class="placeholder-orb">
+                    <span style="background:#f59e0b;"></span>
+                    <span style="background:#f59e0b;"></span>
+                    <span style="background:#f59e0b;"></span>
+                </div>
+                <p>${escapeHtml(message)}</p>
+                <button class="btn-switch-deep" id="btn-switch-deep">Switch to Deep Rewrite</button>
+            </div>
+        `;
+
+        /* Let them switch mode with one click */
+        document.getElementById('btn-switch-deep').addEventListener('click', function () {
+            toggleDeep.checked = true;
+            toggleDeep.dispatchEvent(new Event('change'));
+            showToast('Switched to Deep Rewrite');
+        });
+        return;
+    }
 
     outputArea.innerHTML = `
         <div class="output-placeholder" style="color: #dc2626;">
@@ -1036,7 +1061,8 @@ btnRetry.addEventListener('click', async function () {
         showError(
             error.message,
             error.flaggedWords || null,
-            error.field || 'input'
+            error.field || 'input',
+            error.languageUnsupported || false
         );
     }
 });
