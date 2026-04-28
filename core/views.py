@@ -444,10 +444,11 @@ def download(request: HttpRequest) -> HttpResponse:
 # AUTHENTICATION VIEWS
 # ═══════════════════════════════════════════════════════════════════
 
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.models import User
 from django.shortcuts import redirect
-from .forms import SignUpForm, LoginForm
+from django.contrib.auth.decorators import login_required
+from .forms import SignUpForm, LoginForm, EditProfileForm, ChangePasswordForm
 
 
 def signup_view(request: HttpRequest) -> HttpResponse:
@@ -605,3 +606,109 @@ def logout_view(request: HttpRequest) -> HttpResponse:
         )
         logout(request)
     return redirect('index')
+
+@login_required
+def profile_view(request: HttpRequest) -> HttpResponse:
+    """
+    User profile page — shows account info and edit forms.
+
+    Displays:
+    - Username, email, join date
+    - Edit name form
+    - Change password form
+    - Delete account option
+
+    The @login_required decorator means:
+    - If user is logged in → show the profile page
+    - If user is NOT logged in → redirect to /login/?next=/profile/
+
+    Args:
+        request: The incoming HTTP request
+
+    Returns:
+        Rendered profile.html with user info and forms
+    """
+    user = request.user
+
+    # Check if this user signed up with Google (has no usable password)
+    # Google users can't change password because they don't have one
+    has_password = user.has_usable_password()
+
+    # Pre-fill the edit form with current values
+    edit_form = EditProfileForm(initial={
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+    })
+
+    password_form = ChangePasswordForm()
+
+    # Messages for success/error feedback
+    edit_success = False
+    password_success = False
+
+    if request.method == 'POST':
+        action = request.POST.get('action', '')
+
+        # ── Handle name edit ──
+        if action == 'edit_profile':
+            edit_form = EditProfileForm(request.POST)
+
+            if edit_form.is_valid():
+                user.first_name = edit_form.cleaned_data['first_name']
+                user.last_name = edit_form.cleaned_data['last_name']
+                user.save()
+                edit_success = True
+
+                api_logger.info(
+                    f'PROFILE EDIT | user={user.username} | '
+                    f'ip={request.META.get("REMOTE_ADDR")}'
+                )
+
+        # ── Handle password change ──
+        elif action == 'change_password':
+            password_form = ChangePasswordForm(request.POST)
+
+            if password_form.is_valid():
+                current = password_form.cleaned_data['current_password']
+
+                # Verify current password is correct
+                if not user.check_password(current):
+                    password_form.add_error('current_password', 'Current password is incorrect.')
+                else:
+                    new_pass = password_form.cleaned_data['new_password']
+                    user.set_password(new_pass)
+                    user.save()
+
+                    # Keep the user logged in after password change
+                    # Without this, changing password logs you out
+                    # because the session hash no longer matches
+                    update_session_auth_hash(request, user)
+
+                    password_success = True
+                    password_form = ChangePasswordForm()  # Clear the form
+
+                    api_logger.info(
+                        f'PASSWORD CHANGED | user={user.username} | '
+                        f'ip={request.META.get("REMOTE_ADDR")}'
+                    )
+
+        # ── Handle account deletion ──
+        elif action == 'delete_account':
+            username = user.username
+            user.delete()
+            logout(request)
+
+            api_logger.info(
+                f'ACCOUNT DELETED | user={username} | '
+                f'ip={request.META.get("REMOTE_ADDR")}'
+            )
+
+            return redirect('index')
+
+    return render(request, 'core/profile.html', {
+        'edit_form': edit_form,
+        'password_form': password_form,
+        'edit_success': edit_success,
+        'password_success': password_success,
+        'has_password': has_password,
+    })
