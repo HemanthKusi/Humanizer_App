@@ -35,6 +35,19 @@
             </div>
             <span class="logo-text">Rewright</span>
         </a>
+
+        <nav class="header-nav">
+            {% if user.is_authenticated %}
+                <span class="nav-greeting">{{ user.username }}</span>
+                <form method="POST" action="{% url 'logout' %}" class="nav-logout-form">
+                    {% csrf_token %}
+                    <button type="submit" class="nav-link nav-logout">Log out</button>
+                </form>
+            {% else %}
+                <a href="{% url 'login' %}" class="nav-link">Log in</a>
+                <a href="{% url 'signup' %}" class="nav-link nav-signup">Sign up</a>
+            {% endif %}
+        </nav>
     </header>
 
     <!-- History sidebar — fixed on the right side under logo -->
