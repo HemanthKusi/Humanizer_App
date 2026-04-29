@@ -543,9 +543,12 @@ def login_view(request: HttpRequest) -> HttpResponse:
             if '@' in username_or_email:
                 # Look up the username for this email
                 try:
-                    user_obj = User.objects.get(email=username_or_email.lower())
-                    username = user_obj.username
-                except User.DoesNotExist:
+                    user_obj = User.objects.filter(email=username_or_email.lower()).first()
+                    if user_obj:
+                        username = user_obj.username
+                    else:
+                        username = None
+                except Exception:
                     username = None
             else:
                 username = username_or_email.lower()
@@ -558,18 +561,29 @@ def login_view(request: HttpRequest) -> HttpResponse:
                 user = None
 
             if user is not None:
-                # Success — create session and redirect
-                login(request, user)
+                # Check if account is restricted
+                if not user.is_active:
+                    form.add_error(
+                        None,
+                        'Your account has been restricted. Please contact support if you believe this is a mistake.'
+                    )
 
-                api_logger.info(
-                    f'LOGIN | user={user.username} | '
-                    f'ip={request.META.get("REMOTE_ADDR")}'
-                )
+                    security_logger = logging.getLogger('security')
+                    security_logger.warning(
+                        f'RESTRICTED LOGIN ATTEMPT | user={user.username} | '
+                        f'ip={request.META.get("REMOTE_ADDR")}'
+                    )
+                else:
+                    # Success — create session and redirect
+                    login(request, user)
 
-                # Redirect to 'next' parameter if it exists
-                # (e.g., if they were trying to access a protected page)
-                next_url = request.GET.get('next', '/')
-                return redirect(next_url)
+                    api_logger.info(
+                        f'LOGIN | user={user.username} | '
+                        f'ip={request.META.get("REMOTE_ADDR")}'
+                    )
+
+                    next_url = request.GET.get('next', '/')
+                    return redirect(next_url)
             else:
                 # Failed — add a non-field error
                 form.add_error(None, 'Invalid username/email or password.')

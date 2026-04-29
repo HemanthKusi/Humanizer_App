@@ -319,12 +319,10 @@ LOGOUT_REDIRECT_URL = '/'
 # to know which domain it's running on
 SITE_ID = 1
 
-# Authentication backends — Django checks these in order
-# when authenticating a user
+# Allow authenticate() to return inactive users so we can show
+# a proper "account restricted" message instead of generic "invalid credentials"
 AUTHENTICATION_BACKENDS = [
-    # Default Django backend — handles username/password login
-    'django.contrib.auth.backends.ModelBackend',
-    # Allauth backend — handles social login (Google, etc.)
+    'django.contrib.auth.backends.AllowAllUsersModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
