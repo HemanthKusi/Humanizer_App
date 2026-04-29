@@ -277,3 +277,61 @@ class ChangePasswordForm(forms.Form):
             self.add_error('confirm_new_password', 'New passwords do not match.')
 
         return cleaned_data
+    
+
+from .models import UserPreferences, Feedback
+
+
+class PreferencesForm(forms.Form):
+    """
+    Form for editing user preferences.
+
+    Fields:
+        - default_mode: Quick Fix or Deep Rewrite
+        - default_tone: Which tone to pre-select
+
+    These get saved to the UserPreferences model and loaded
+    on the homepage so the user's preferred settings are
+    already selected when they visit.
+    """
+
+    default_mode = forms.ChoiceField(
+        choices=UserPreferences.MODE_CHOICES,
+        widget=forms.RadioSelect(),
+        initial='quick',
+    )
+
+    default_tone = forms.ChoiceField(
+        choices=UserPreferences.TONE_CHOICES,
+        widget=forms.RadioSelect(),
+        initial='default',
+    )
+
+
+class FeedbackForm(forms.Form):
+    """
+    Form for submitting feedback, bug reports, or feature requests.
+
+    Fields:
+        - category: What kind of feedback (bug, feature, general)
+        - message: The actual feedback text (max 2000 chars)
+
+    Submitted feedback is stored in the Feedback model and
+    visible to admins in the admin panel.
+    """
+
+    category = forms.ChoiceField(
+        choices=Feedback.CATEGORY_CHOICES,
+        widget=forms.Select(attrs={
+            'class': 'feedback-select',
+        }),
+        initial='general',
+    )
+
+    message = forms.CharField(
+        max_length=2000,
+        widget=forms.Textarea(attrs={
+            'placeholder': 'Tell us what you think. Bug reports, feature ideas, or general feedback — all welcome.\n\nBe as specific as you can. The more detail, the better we can act on it.',
+            'rows': 5,
+        }),
+    )
