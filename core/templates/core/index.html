@@ -38,7 +38,7 @@
 
         <nav class="header-nav">
             {% if user.is_authenticated %}
-                <span class="nav-greeting">{{ user.username }}</span>
+                <a href="{% url 'profile' %}" class="nav-link">{{ user.username }}</a>
                 <form method="POST" action="{% url 'logout' %}" class="nav-logout-form">
                     {% csrf_token %}
                     <button type="submit" class="nav-link nav-logout">Log out</button>
