@@ -41,6 +41,9 @@ urlpatterns = [
     # Profile page
     # The user sees this when they click "Profile" on the homepage.
     path('profile/', views.profile_view, name='profile'),
+    # Admin user management page
+    # This is a custom admin page we create at /admin/users/ for staff users to manage user accounts.
+    path('admin/users/', views.admin_users_view, name='admin_users'),
 
     # ── API endpoints ──
 

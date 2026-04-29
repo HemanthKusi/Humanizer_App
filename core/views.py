@@ -726,3 +726,106 @@ def profile_view(request: HttpRequest) -> HttpResponse:
         'password_success': password_success,
         'has_password': has_password,
     })
+
+from django.contrib.admin.views.decorators import staff_member_required
+
+
+@staff_member_required(login_url='/login/')
+def admin_users_view(request: HttpRequest) -> HttpResponse:
+    """
+    Custom admin page for managing users.
+
+    Only accessible by staff users (is_staff=True).
+    Non-staff users get redirected to login page.
+
+    Features:
+    - View all users in a table
+    - Search by username or email
+    - Filter by status (all, active, restricted)
+    - Restrict/unrestrict users with confirmation
+
+    The @staff_member_required decorator checks is_staff.
+    If False, redirects to login_url.
+
+    Args:
+        request: The incoming HTTP request
+
+    Returns:
+        Rendered admin_users.html with user list
+    """
+
+    # ── Handle restrict/unrestrict actions (POST) ──
+    if request.method == 'POST':
+        action = request.POST.get('action', '')
+        user_id = request.POST.get('user_id', '')
+
+        if user_id:
+            try:
+                target_user = User.objects.get(id=user_id)
+
+                # Don't let admin restrict themselves
+                if target_user.pk == request.user.pk:
+                    pass  # Silently ignore
+                elif action == 'restrict':
+                    target_user.is_active = False
+                    target_user.save()
+                    api_logger.info(
+                        f'USER RESTRICTED | admin={request.user.username} | '
+                        f'target={target_user.username} | '
+                        f'ip={request.META.get("REMOTE_ADDR")}'
+                    )
+                elif action == 'unrestrict':
+                    target_user.is_active = True
+                    target_user.save()
+                    api_logger.info(
+                        f'USER UNRESTRICTED | admin={request.user.username} | '
+                        f'target={target_user.username} | '
+                        f'ip={request.META.get("REMOTE_ADDR")}'
+                    )
+            except User.DoesNotExist:
+                pass
+
+        return redirect('admin_users')
+
+    # ── GET: Build the user list ──
+
+    # Search query
+    search = request.GET.get('search', '').strip()
+
+    # Status filter
+    status = request.GET.get('status', 'all')
+
+    # Start with all users
+    users = User.objects.all().order_by('-date_joined')
+
+    # Apply search filter
+    if search:
+        from django.db.models import Q
+        users = users.filter(
+            Q(username__icontains=search) |
+            Q(email__icontains=search) |
+            Q(first_name__icontains=search) |
+            Q(last_name__icontains=search)
+        )
+
+    # Apply status filter
+    if status == 'active':
+        users = users.filter(is_active=True)
+    elif status == 'restricted':
+        users = users.filter(is_active=False)
+
+    # Stats for the top of the page
+    total_users = User.objects.count()
+    active_users = User.objects.filter(is_active=True).count()
+    restricted_users = User.objects.filter(is_active=False).count()
+    staff_users = User.objects.filter(is_staff=True).count()
+
+    return render(request, 'core/admin_users.html', {
+        'users': users,
+        'search': search,
+        'status': status,
+        'total_users': total_users,
+        'active_users': active_users,
+        'restricted_users': restricted_users,
+        'staff_users': staff_users,
+    })
