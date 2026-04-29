@@ -528,9 +528,22 @@ def login_view(request: HttpRequest) -> HttpResponse:
         POST (valid): Redirect to homepage (user is now logged in)
         POST (invalid): Rendered login.html with error message
     """
-    # If user is already logged in, send them to homepage
     if request.user.is_authenticated:
         return redirect('index')
+
+    # Pick up restriction messages from allauth redirect
+    from django.contrib.messages import get_messages
+    restriction_msg = None
+    for msg in get_messages(request):
+        if 'restricted' in str(msg).lower():
+            restriction_msg = str(msg)
+
+    if restriction_msg:
+        form = LoginForm()
+        return render(request, 'core/login.html', {
+            'form': form,
+            'restriction_error': restriction_msg,
+        })
 
     if request.method == 'POST':
         form = LoginForm(request.POST)
@@ -541,7 +554,6 @@ def login_view(request: HttpRequest) -> HttpResponse:
 
             # Check if they entered an email (contains @)
             if '@' in username_or_email:
-                # Look up the username for this email
                 try:
                     user_obj = User.objects.filter(email=username_or_email.lower()).first()
                     if user_obj:
@@ -553,39 +565,49 @@ def login_view(request: HttpRequest) -> HttpResponse:
             else:
                 username = username_or_email.lower()
 
-            # Try to authenticate
-            # authenticate() checks the password hash — returns User or None
+            # Check if user exists and is restricted BEFORE authenticating
+            # We do this because ModelBackend returns None for inactive users,
+            # so we'd never know if the password was right but account restricted
+            if username:
+                try:
+                    target_user = User.objects.get(username=username)
+                    if not target_user.is_active:
+                        # Account is restricted — check password first
+                        # so we don't reveal account existence to wrong passwords
+                        if target_user.check_password(password):
+                            form.add_error(
+                                None,
+                                'Your account has been restricted. Please contact support if you believe this is a mistake.'
+                            )
+                            security_logger = logging.getLogger('security')
+                            security_logger.warning(
+                                f'RESTRICTED LOGIN ATTEMPT | user={target_user.username} | '
+                                f'ip={request.META.get("REMOTE_ADDR")}'
+                            )
+                        else:
+                            form.add_error(None, 'Invalid username/email or password.')
+                        # Don't proceed to authenticate — stop here
+                        return render(request, 'core/login.html', {'form': form})
+                except User.DoesNotExist:
+                    pass
+
+            # Try to authenticate (only reaches here if user is active or doesn't exist)
             if username:
                 user = authenticate(request, username=username, password=password)
             else:
                 user = None
 
             if user is not None:
-                # Check if account is restricted
-                if not user.is_active:
-                    form.add_error(
-                        None,
-                        'Your account has been restricted. Please contact support if you believe this is a mistake.'
-                    )
+                login(request, user)
 
-                    security_logger = logging.getLogger('security')
-                    security_logger.warning(
-                        f'RESTRICTED LOGIN ATTEMPT | user={user.username} | '
-                        f'ip={request.META.get("REMOTE_ADDR")}'
-                    )
-                else:
-                    # Success — create session and redirect
-                    login(request, user)
+                api_logger.info(
+                    f'LOGIN | user={user.username} | '
+                    f'ip={request.META.get("REMOTE_ADDR")}'
+                )
 
-                    api_logger.info(
-                        f'LOGIN | user={user.username} | '
-                        f'ip={request.META.get("REMOTE_ADDR")}'
-                    )
-
-                    next_url = request.GET.get('next', '/')
-                    return redirect(next_url)
+                next_url = request.GET.get('next', '/')
+                return redirect(next_url)
             else:
-                # Failed — add a non-field error
                 form.add_error(None, 'Invalid username/email or password.')
 
                 security_logger = logging.getLogger('security')
@@ -829,3 +851,15 @@ def admin_users_view(request: HttpRequest) -> HttpResponse:
         'restricted_users': restricted_users,
         'staff_users': staff_users,
     })
+
+def inactive_redirect_view(request: HttpRequest) -> HttpResponse:
+    """
+    Catch allauth's inactive account redirect and send back to login
+    with a restriction warning message.
+    """
+    from django.contrib import messages
+    messages.error(
+        request,
+        'Your account has been restricted. Please contact an admin if you believe this is a mistake.'
+    )
+    return redirect('login')

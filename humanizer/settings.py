@@ -319,10 +319,10 @@ LOGOUT_REDIRECT_URL = '/'
 # to know which domain it's running on
 SITE_ID = 1
 
-# Allow authenticate() to return inactive users so we can show
-# a proper "account restricted" message instead of generic "invalid credentials"
+# Custom account adapter for allauth
+# This tells allauth to use our adapter which redirects to our custom login/signup pages.
 AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.AllowAllUsersModelBackend',
+    'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 

@@ -45,6 +45,13 @@
             <h2 class="auth-title">Welcome back</h2>
             <p class="auth-subtitle">Log in to continue</p>
 
+            <!-- Restriction warning -->
+            {% if restriction_error %}
+                <div class="auth-error-box">
+                    <p>{{ restriction_error }}</p>
+                </div>
+            {% endif %}
+
             <!-- Non-field errors (like "invalid credentials") -->
             {% if form.non_field_errors %}
                 <div class="auth-error-box">
