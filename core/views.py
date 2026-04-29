@@ -36,6 +36,8 @@ from .readability import flesch_reading_ease
 
 from .language import detect_language
 
+from .models import UserPreferences, Feedback
+
 def track_usage(request):
     """
     Record a successful request in the rate limiter's tracker.
@@ -60,6 +62,9 @@ def index(request: HttpRequest) -> HttpResponse:
     """
     Renders the homepage of the humanizer app.
 
+    If the user is logged in, loads their preferences so the
+    frontend can set the default mode and tone.
+
     Args:
         request: The incoming HTTP request
 
@@ -67,6 +72,18 @@ def index(request: HttpRequest) -> HttpResponse:
         The rendered index.html template
     """
     context = {}
+
+    # Load user preferences if logged in
+    if request.user.is_authenticated:
+        try:
+            prefs = UserPreferences.objects.get(user=request.user)
+            context['user_prefs'] = {
+                'default_mode': prefs.default_mode,
+                'default_tone': prefs.default_tone,
+            }
+        except UserPreferences.DoesNotExist:
+            context['user_prefs'] = None
+
     return render(request, 'core/index.html', context)
 
 
@@ -448,7 +465,7 @@ from django.contrib.auth import authenticate, login, logout, update_session_auth
 from django.contrib.auth.models import User
 from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
-from .forms import SignUpForm, LoginForm, EditProfileForm, ChangePasswordForm
+from .forms import SignUpForm, LoginForm, EditProfileForm, ChangePasswordForm, PreferencesForm, FeedbackForm
 
 
 def signup_view(request: HttpRequest) -> HttpResponse:
@@ -863,3 +880,95 @@ def inactive_redirect_view(request: HttpRequest) -> HttpResponse:
         'Your account has been restricted. Please contact an admin if you believe this is a mistake.'
     )
     return redirect('login')
+
+
+@login_required
+def settings_view(request: HttpRequest) -> HttpResponse:
+    """
+    User settings page — preferences and feedback.
+
+    Two sections:
+    1. Preferences — default mode and tone, saved to UserPreferences model
+    2. Feedback — submit bug reports, feature requests, or general feedback
+
+    Both forms are on the same page. A hidden 'action' field tells us
+    which form was submitted.
+
+    The @login_required decorator redirects unauthenticated users to login.
+
+    Args:
+        request: The incoming HTTP request
+
+    Returns:
+        Rendered settings.html with preference and feedback forms
+    """
+    user = request.user
+
+    # Get or create preferences for this user
+    # get_or_create returns (object, created_boolean)
+    # If the user has never visited settings, it creates a default record
+    prefs, created = UserPreferences.objects.get_or_create(user=user)
+
+    # Pre-fill the preferences form with current values
+    prefs_form = PreferencesForm(initial={
+        'default_mode': prefs.default_mode,
+        'default_tone': prefs.default_tone,
+    })
+
+    feedback_form = FeedbackForm()
+
+    # Success flags
+    prefs_success = False
+    feedback_success = False
+
+    if request.method == 'POST':
+        action = request.POST.get('action', '')
+
+        # ── Handle preferences save ──
+        if action == 'save_preferences':
+            prefs_form = PreferencesForm(request.POST)
+
+            if prefs_form.is_valid():
+                prefs.default_mode = prefs_form.cleaned_data['default_mode']
+                prefs.default_tone = prefs_form.cleaned_data['default_tone']
+                prefs.save()
+                prefs_success = True
+
+                api_logger.info(
+                    f'PREFERENCES SAVED | user={user.username} | '
+                    f'mode={prefs.default_mode} | tone={prefs.default_tone} | '
+                    f'ip={request.META.get("REMOTE_ADDR")}'
+                )
+
+        # ── Handle feedback submission ──
+        elif action == 'submit_feedback':
+            feedback_form = FeedbackForm(request.POST)
+
+            if feedback_form.is_valid():
+                # Create the feedback record
+                Feedback.objects.create(
+                    user=user,
+                    category=feedback_form.cleaned_data['category'],
+                    message=feedback_form.cleaned_data['message'],
+                )
+
+                feedback_success = True
+                feedback_form = FeedbackForm()  # Clear the form after success
+
+                api_logger.info(
+                    f'FEEDBACK SUBMITTED | user={user.username} | '
+                    f'category={feedback_form.cleaned_data["category"] if not feedback_success else "saved"} | '
+                    f'ip={request.META.get("REMOTE_ADDR")}'
+                )
+
+    # Get user's past feedback to show below the form
+    user_feedback = Feedback.objects.filter(user=user).order_by('-created_at')[:5]
+
+    return render(request, 'core/settings.html', {
+        'prefs_form': prefs_form,
+        'feedback_form': feedback_form,
+        'prefs_success': prefs_success,
+        'feedback_success': feedback_success,
+        'user_feedback': user_feedback,
+        'current_prefs': prefs,
+    })

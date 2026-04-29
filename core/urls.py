@@ -44,6 +44,9 @@ urlpatterns = [
     # Admin user management page
     # This is a custom admin page we create at /manage/users/ for staff users to manage user accounts.
     path('manage/users/', views.admin_users_view, name='admin_users'),
+    # User settings page
+    # The user sees this when they click "Settings" on their profile.
+    path('settings/', views.settings_view, name='settings'),
 
     # ── API endpoints ──
 
