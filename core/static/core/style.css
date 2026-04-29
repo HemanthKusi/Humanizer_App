@@ -2699,3 +2699,307 @@ body.premium .admin-modal {
 body.premium .admin-modal-text {
     color: #e2e8f0;
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   SETTINGS PAGE — Preferences & Feedback
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Settings group (label + inputs) ── */
+.settings-group {
+    margin-bottom: 1.25rem;
+}
+
+.settings-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.settings-hint {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin: -0.25rem 0 0.6rem 0;
+}
+
+/* ── Mode radio buttons (two big cards) ── */
+.settings-radio-group {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.settings-radio {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.settings-radio:hover {
+    border-color: var(--text-secondary);
+}
+
+.settings-radio.selected,
+.settings-radio:has(input:checked) {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+}
+
+/* Hide the actual radio input */
+.settings-radio input[type="radio"] {
+    display: none;
+}
+
+.settings-radio-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.settings-radio-icon {
+    font-size: 1.1rem;
+}
+
+.settings-radio-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.settings-radio-desc {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+/* ── Tone radio buttons (grid of pills) ── */
+.settings-tone-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.settings-tone {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.settings-tone:hover {
+    border-color: var(--text-secondary);
+}
+
+.settings-tone.selected,
+.settings-tone:has(input:checked) {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+}
+
+/* Hide the actual radio input */
+.settings-tone input[type="radio"] {
+    display: none;
+}
+
+.settings-tone-name {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+/* ── Feedback select dropdown ── */
+.feedback-select {
+    width: 100%;
+    padding: 0.7rem 0.85rem;
+    font-size: 0.9rem;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    outline: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.85rem center;
+}
+
+.feedback-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* ── Feedback textarea ── */
+.settings-form textarea,
+.profile-form textarea {
+    width: 100%;
+    padding: 0.7rem 0.85rem;
+    font-size: 0.9rem;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    outline: none;
+    resize: vertical;
+    min-height: 100px;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.settings-form textarea:focus,
+.profile-form textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* ── Past feedback history ── */
+.feedback-history {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.feedback-item {
+    padding: 0.75rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.feedback-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.feedback-category-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.badge-bug {
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+.badge-feature {
+    background: #eff6ff;
+    color: #1e40af;
+}
+
+.badge-general {
+    background: #f0fdf4;
+    color: #166534;
+}
+
+.feedback-date {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.feedback-message {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    line-height: 1.5;
+    margin: 0;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   SETTINGS — Dark mode overrides
+   ═══════════════════════════════════════════════════════════════════ */
+
+body.premium .settings-radio {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+body.premium .settings-radio:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+body.premium .settings-radio.selected,
+body.premium .settings-radio:has(input:checked) {
+    border-color: var(--accent);
+    background: rgba(99, 102, 241, 0.1);
+}
+
+body.premium .settings-tone {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+body.premium .settings-tone:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+body.premium .settings-tone.selected,
+body.premium .settings-tone:has(input:checked) {
+    border-color: var(--accent);
+    background: rgba(99, 102, 241, 0.1);
+}
+
+body.premium .feedback-select {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+}
+
+body.premium .feedback-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+body.premium .settings-form textarea,
+body.premium .profile-form textarea {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+}
+
+body.premium .settings-form textarea:focus,
+body.premium .profile-form textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+body.premium .feedback-item {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.06);
+}
+
+body.premium .badge-bug {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+}
+
+body.premium .badge-feature {
+    background: rgba(59, 130, 246, 0.15);
+    color: #93c5fd;
+}
+
+body.premium .badge-general {
+    background: rgba(34, 197, 94, 0.15);
+    color: #86efac;
+}

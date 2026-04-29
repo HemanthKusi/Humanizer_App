@@ -1403,6 +1403,35 @@ loadHistory();
 
 
 /* ═══════════════════════════════════════════════════════════════════
+   LOAD USER PREFERENCES
+   If the user has saved preferences, apply them on page load.
+   ═══════════════════════════════════════════════════════════════════ */
+
+(function () {
+    if (!window.USER_PREFS) return;
+
+    const prefs = window.USER_PREFS;
+
+    /* Apply default mode */
+    if (prefs.defaultMode === 'deep' && !toggleDeep.checked) {
+        toggleDeep.checked = true;
+        toggleDeep.dispatchEvent(new Event('change'));
+    }
+
+    /* Apply default tone (only relevant in deep mode) */
+    if (prefs.defaultTone && prefs.defaultTone !== 'default') {
+        selectedTone = prefs.defaultTone;
+        toneButtons.forEach(function (btn) {
+            btn.classList.remove('active');
+            if (btn.getAttribute('data-tone') === prefs.defaultTone) {
+                btn.classList.add('active');
+            }
+        });
+    }
+})();
+
+
+/* ═══════════════════════════════════════════════════════════════════
    10. TOAST
    ═══════════════════════════════════════════════════════════════════ */
 

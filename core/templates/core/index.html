@@ -252,6 +252,15 @@ Min 100 words · Max 500 words"></textarea>
     </main>
 
     <div class="toast" id="toast"></div>
+    <!-- Load user preferences -->
+    {% if user_prefs %}
+    <script>
+        window.USER_PREFS = {
+            defaultMode: '{{ user_prefs.default_mode }}',
+            defaultTone: '{{ user_prefs.default_tone }}'
+        };
+    </script>
+    {% endif %}
     <script src="{% static 'core/main.js' %}"></script>
 </body>
 </html>
