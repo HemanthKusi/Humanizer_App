@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management — Rewright Admin</title>
+    <link rel="icon" href="{% static 'core/favicon.svg' %}" type="image/svg+xml">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="{% static 'core/style.css' %}">
+</head>
+<body>
+
+    <!-- Backgrounds -->
+    <canvas id="solar-system"></canvas>
+    <div class="bg-aurora"></div>
+    <div class="bg-grain"></div>
+
+    <!-- ─── HEADER ──────────────────────────────────── -->
+    <header>
+        <a href="/" class="logo">
+            <div class="logo-mark">
+                <svg width="40" height="40" viewBox="0 0 32 32" fill="none">
+                    <ellipse cx="16" cy="16" rx="12" ry="12" stroke="var(--accent)" stroke-width="1" opacity="0.2"/>
+                    <ellipse cx="16" cy="16" rx="12" ry="5" stroke="var(--accent)" stroke-width="0.8" opacity="0.15" transform="rotate(-20 16 16)"/>
+                    <circle cx="16" cy="16" r="4.5" fill="var(--accent)"/>
+                    <circle cx="14.5" cy="14.5" r="2" fill="white" opacity="0.3"/>
+                    <circle cx="16" cy="16" r="2" fill="var(--accent)" opacity="0.8" class="logo-planet"/>
+                </svg>
+            </div>
+            <span class="logo-text">Rewright</span>
+        </a>
+
+        <nav class="header-nav">
+            <a href="{% url 'admin_users' %}" class="nav-link nav-active">Admin</a>
+            <a href="{% url 'profile' %}" class="nav-link">{{ user.username }}</a>
+            <form method="POST" action="{% url 'logout' %}" class="nav-logout-form">
+                {% csrf_token %}
+                <button type="submit" class="nav-link nav-logout">Log out</button>
+            </form>
+        </nav>
+    </header>
+
+    <!-- ─── ADMIN CONTENT ───────────────────────────── -->
+    <main class="auth-main">
+        <div class="admin-container">
+
+            <h1 class="admin-page-title">User Management</h1>
+
+            <!-- ── Stats cards ── -->
+            <div class="admin-stats">
+                <div class="admin-stat-card">
+                    <span class="admin-stat-number">{{ total_users }}</span>
+                    <span class="admin-stat-label">Total users</span>
+                </div>
+                <div class="admin-stat-card">
+                    <span class="admin-stat-number admin-stat-active">{{ active_users }}</span>
+                    <span class="admin-stat-label">Active</span>
+                </div>
+                <div class="admin-stat-card">
+                    <span class="admin-stat-number admin-stat-restricted">{{ restricted_users }}</span>
+                    <span class="admin-stat-label">Restricted</span>
+                </div>
+                <div class="admin-stat-card">
+                    <span class="admin-stat-number admin-stat-staff">{{ staff_users }}</span>
+                    <span class="admin-stat-label">Admins</span>
+                </div>
+            </div>
+
+            <!-- ── Search and filter bar ── -->
+            <div class="admin-toolbar">
+                <form method="GET" action="{% url 'admin_users' %}" class="admin-search-form">
+                    <input
+                        type="text"
+                        name="search"
+                        value="{{ search }}"
+                        placeholder="Search by username, email, or name..."
+                        class="admin-search-input"
+                    >
+                    <!-- Preserve the status filter when searching -->
+                    {% if status != 'all' %}
+                        <input type="hidden" name="status" value="{{ status }}">
+                    {% endif %}
+                    <button type="submit" class="admin-search-btn">Search</button>
+                </form>
+
+                <div class="admin-filters">
+                    <a href="{% url 'admin_users' %}{% if search %}?search={{ search }}{% endif %}"
+                       class="admin-filter-btn {% if status == 'all' %}active{% endif %}">
+                        All
+                    </a>
+                    <a href="{% url 'admin_users' %}?status=active{% if search %}&search={{ search }}{% endif %}"
+                       class="admin-filter-btn {% if status == 'active' %}active{% endif %}">
+                        Active
+                    </a>
+                    <a href="{% url 'admin_users' %}?status=restricted{% if search %}&search={{ search }}{% endif %}"
+                       class="admin-filter-btn {% if status == 'restricted' %}active{% endif %}">
+                        Restricted
+                    </a>
+                </div>
+            </div>
+
+            <!-- ── Users table ── -->
+            <div class="admin-table-wrapper">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Email</th>
+                            <th>Joined</th>
+                            <th>Last login</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in users %}
+                        <tr class="{% if not u.is_active %}row-restricted{% endif %}">
+                            <td>
+                                <div class="user-cell">
+                                    <span class="user-cell-name">{{ u.username }}</span>
+                                    {% if u.first_name or u.last_name %}
+                                        <span class="user-cell-fullname">{{ u.first_name }} {{ u.last_name }}</span>
+                                    {% endif %}
+                                    {% if u.is_staff %}
+                                        <span class="user-badge badge-admin">Admin</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>{{ u.email }}</td>
+                            <td>{{ u.date_joined|date:"M j, Y" }}</td>
+                            <td>
+                                {% if u.last_login %}
+                                    {{ u.last_login|date:"M j, Y" }}
+                                {% else %}
+                                    <span class="text-muted">Never</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if u.is_active %}
+                                    <span class="user-status status-active">Active</span>
+                                {% else %}
+                                    <span class="user-status status-restricted">Restricted</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if u.pk != request.user.pk %}
+                                    {% if u.is_active %}
+                                        <button class="admin-action-btn btn-restrict"
+                                                data-user-id="{{ u.pk }}"
+                                                data-username="{{ u.username }}"
+                                                data-action="restrict">
+                                            Restrict
+                                        </button>
+                                    {% else %}
+                                        <button class="admin-action-btn btn-unrestrict"
+                                                data-user-id="{{ u.pk }}"
+                                                data-username="{{ u.username }}"
+                                                data-action="unrestrict">
+                                            Unrestrict
+                                        </button>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">You</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="admin-table-empty">
+                                {% if search %}
+                                    No users found matching "{{ search }}"
+                                {% else %}
+                                    No users yet
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Hidden form for restrict/unrestrict actions -->
+    <form method="POST" action="{% url 'admin_users' %}" id="admin-action-form" style="display:none;">
+        {% csrf_token %}
+        <input type="hidden" name="action" id="admin-action-value">
+        <input type="hidden" name="user_id" id="admin-user-id-value">
+    </form>
+
+    <!-- Confirmation modal -->
+    <div class="admin-modal-overlay" id="admin-modal" style="display:none;">
+        <div class="admin-modal">
+            <p class="admin-modal-text" id="admin-modal-text"></p>
+            <div class="admin-modal-buttons">
+                <button class="admin-modal-confirm" id="admin-modal-confirm">Yes, confirm</button>
+                <button class="admin-modal-cancel" id="admin-modal-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{% static 'core/main.js' %}"></script>
+
+    <!-- Admin page inline script -->
+    <script>
+        (function () {
+            const modal = document.getElementById('admin-modal');
+            const modalText = document.getElementById('admin-modal-text');
+            const modalConfirm = document.getElementById('admin-modal-confirm');
+            const modalCancel = document.getElementById('admin-modal-cancel');
+            const actionForm = document.getElementById('admin-action-form');
+            const actionValue = document.getElementById('admin-action-value');
+            const userIdValue = document.getElementById('admin-user-id-value');
+
+            if (!modal) return;
+
+            /* Attach click handlers to all action buttons */
+            document.querySelectorAll('.admin-action-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    const userId = this.getAttribute('data-user-id');
+                    const username = this.getAttribute('data-username');
+                    const action = this.getAttribute('data-action');
+
+                    /* Set modal message */
+                    if (action === 'restrict') {
+                        modalText.innerHTML = 'Are you sure you want to restrict <strong>' + username + '</strong>? They will not be able to log in.';
+                        modalConfirm.textContent = 'Yes, restrict';
+                        modalConfirm.className = 'admin-modal-confirm modal-btn-danger';
+                    } else {
+                        modalText.innerHTML = 'Unrestrict <strong>' + username + '</strong>? They will be able to log in again.';
+                        modalConfirm.textContent = 'Yes, unrestrict';
+                        modalConfirm.className = 'admin-modal-confirm modal-btn-success';
+                    }
+
+                    /* Store values in hidden form */
+                    actionValue.value = action;
+                    userIdValue.value = userId;
+
+                    /* Show modal */
+                    modal.style.display = 'flex';
+                });
+            });
+
+            /* Confirm — submit the form */
+            modalConfirm.addEventListener('click', function () {
+                actionForm.submit();
+            });
+
+            /* Cancel — hide modal */
+            modalCancel.addEventListener('click', function () {
+                modal.style.display = 'none';
+            });
+
+            /* Click overlay to close */
+            modal.addEventListener('click', function (e) {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        })();
+    </script>
+
+</body>
+</html>

@@ -332,6 +332,9 @@ AUTHENTICATION_BACKENDS = [
 ACCOUNT_LOGIN_URL = '/login/'
 ACCOUNT_SIGNUP_URL = '/signup/'
 
+# Redirect allauth's default login/signup URLs to ours
+ACCOUNT_ADAPTER = 'core.adapters.CustomAccountAdapter'
+
 # After social login, redirect to homepage
 SOCIALACCOUNT_LOGIN_ON_GET = True
 

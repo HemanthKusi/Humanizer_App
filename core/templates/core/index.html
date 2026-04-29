@@ -38,6 +38,9 @@
 
         <nav class="header-nav">
             {% if user.is_authenticated %}
+                {% if user.is_staff %}
+                    <a href="{% url 'admin_users' %}" class="nav-link">Admin</a>
+                {% endif %}
                 <a href="{% url 'profile' %}" class="nav-link">{{ user.username }}</a>
                 <form method="POST" action="{% url 'logout' %}" class="nav-logout-form">
                     {% csrf_token %}

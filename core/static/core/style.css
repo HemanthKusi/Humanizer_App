@@ -2210,3 +2210,492 @@ body.premium .delete-confirm-input:focus {
     border-color: #f87171;
     box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.1);
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   ADMIN — User Management Page
+   Custom admin interface matching the site's design.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.admin-container {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding-bottom: 3rem;
+}
+
+.admin-page-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+/* ── Stats cards row ── */
+.admin-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+}
+
+.admin-stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem 1rem;
+    text-align: center;
+    backdrop-filter: blur(20px);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.admin-stat-number {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.admin-stat-active {
+    color: #16a34a;
+}
+
+.admin-stat-restricted {
+    color: #dc2626;
+}
+
+.admin-stat-staff {
+    color: var(--accent);
+}
+
+.admin-stat-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+}
+
+/* ── Search and filter toolbar ── */
+.admin-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.admin-search-form {
+    display: flex;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 250px;
+}
+
+.admin-search-input {
+    flex: 1;
+    padding: 0.6rem 0.85rem;
+    font-size: 0.85rem;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text-primary);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    outline: none;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(20px);
+}
+
+.admin-search-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.admin-search-input::placeholder {
+    color: var(--text-secondary);
+}
+
+.admin-search-btn {
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    color: #fff;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.admin-search-btn:hover {
+    background: var(--accent-hover);
+}
+
+/* ── Filter buttons ── */
+.admin-filters {
+    display: flex;
+    gap: 0.35rem;
+}
+
+.admin-filter-btn {
+    padding: 0.5rem 0.85rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text-secondary);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(20px);
+}
+
+.admin-filter-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+}
+
+.admin-filter-btn.active {
+    color: #fff;
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+/* ── Users table ── */
+.admin-table-wrapper {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.admin-table thead {
+    background: var(--bg-secondary);
+}
+
+.admin-table th {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--border);
+}
+
+.admin-table td {
+    padding: 0.75rem 1rem;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+
+.admin-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.admin-table tbody tr:hover {
+    background: var(--bg-secondary);
+}
+
+/* Restricted user rows are slightly faded */
+.row-restricted {
+    opacity: 0.65;
+}
+
+.row-restricted:hover {
+    opacity: 1;
+}
+
+/* ── User cell (username + full name + badge) ── */
+.user-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.user-cell-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.user-cell-fullname {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+/* ── Badges ── */
+.user-badge {
+    display: inline-block;
+    padding: 0.1rem 0.45rem;
+    font-size: 0.65rem;
+    font-weight: 600;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    width: fit-content;
+    margin-top: 0.15rem;
+}
+
+.badge-admin {
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+/* ── Status pills ── */
+.user-status {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 20px;
+}
+
+.status-active {
+    background: #f0fdf4;
+    color: #166534;
+}
+
+.status-restricted {
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+/* ── Action buttons ── */
+.admin-action-btn {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    border: 1px solid;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: none;
+}
+
+.btn-restrict {
+    color: #dc2626;
+    border-color: #dc2626;
+}
+
+.btn-restrict:hover {
+    background: #dc2626;
+    color: #fff;
+}
+
+.btn-unrestrict {
+    color: #16a34a;
+    border-color: #16a34a;
+}
+
+.btn-unrestrict:hover {
+    background: #16a34a;
+    color: #fff;
+}
+
+/* ── Empty state ── */
+.admin-table-empty {
+    text-align: center;
+    padding: 2rem 1rem !important;
+    color: var(--text-secondary);
+}
+
+/* ── Muted text helper ── */
+.text-muted {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   ADMIN MODAL — Confirmation dialog
+   ═══════════════════════════════════════════════════════════════════ */
+
+.admin-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.admin-modal {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.75rem;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
+}
+
+.admin-modal-text {
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    line-height: 1.5;
+    margin: 0 0 1.25rem 0;
+}
+
+.admin-modal-buttons {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.admin-modal-confirm {
+    padding: 0.55rem 1.1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modal-btn-danger {
+    background: #dc2626;
+}
+
+.modal-btn-danger:hover {
+    background: #b91c1c;
+}
+
+.modal-btn-success {
+    background: #16a34a;
+}
+
+.modal-btn-success:hover {
+    background: #15803d;
+}
+
+.admin-modal-cancel {
+    padding: 0.55rem 1.1rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text-secondary);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.admin-modal-cancel:hover {
+    background: var(--bg-secondary);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   ADMIN — Dark mode overrides
+   ═══════════════════════════════════════════════════════════════════ */
+
+body.premium .admin-stat-card {
+    background: rgba(15, 15, 25, 0.85);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+body.premium .admin-stat-active {
+    color: #4ade80;
+}
+
+body.premium .admin-stat-restricted {
+    color: #f87171;
+}
+
+body.premium .admin-search-input {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+}
+
+body.premium .admin-search-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+body.premium .admin-filter-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.5);
+}
+
+body.premium .admin-filter-btn:hover {
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+body.premium .admin-filter-btn.active {
+    color: #fff;
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+body.premium .admin-table-wrapper {
+    background: rgba(15, 15, 25, 0.85);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+body.premium .admin-table thead {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+body.premium .admin-table th {
+    color: rgba(255, 255, 255, 0.5);
+    border-color: rgba(255, 255, 255, 0.06);
+}
+
+body.premium .admin-table td {
+    color: #e2e8f0;
+    border-color: rgba(255, 255, 255, 0.06);
+}
+
+body.premium .admin-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+body.premium .status-active {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+}
+
+body.premium .status-restricted {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+}
+
+body.premium .badge-admin {
+    background: rgba(99, 102, 241, 0.15);
+    color: #a5b4fc;
+}
+
+body.premium .admin-modal {
+    background: rgba(15, 15, 25, 0.95);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+body.premium .admin-modal-text {
+    color: #e2e8f0;
+}
