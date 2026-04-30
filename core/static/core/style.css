@@ -11,9 +11,9 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 :root {
-    --bg:              #f5f3ee;
+    --bg:              #f8f4ef;
     --bg-gradient:     linear-gradient(135deg, #f9f6f0 0%, #f0ebe0 40%, #f5f0e6 70%, #ede7da 100%);
-    --bg-secondary:    #eae7e0;
+    --bg-secondary:    #efe9e1;
     --surface:         #ffffff;
     --border:          #e0dcd4;
     --border-focus:    #ccc7bc;
@@ -90,7 +90,7 @@ html::-webkit-scrollbar {
 
 body {
     font-family: var(--font-body);
-    background: linear-gradient(135deg, #f9f6f0 0%, #f0ebe0 40%, #f5f0e6 70%, #ede7da 100%);
+    background: linear-gradient(135deg, #fcfaf7 0%, #f4efe7 40%, #f8f4ef 70%, #efe9e1 100%);
     background-attachment: fixed;
     color: var(--text-primary);
     min-height: 100vh;

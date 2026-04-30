@@ -132,8 +132,9 @@ def humanize(request: HttpRequest) -> JsonResponse:
             text = text_result['text']
             if text_result['profanity_flagged']:
                 security_logger = logging.getLogger('security')
+                log_user = f'{request.user.username} (id={request.user.id})' if request.user.is_authenticated else 'Guest'
                 security_logger.warning(
-                    f'PROFANITY | ip={request.META.get("REMOTE_ADDR")} | '
+                    f'PROFANITY | user={log_user} | ip={request.META.get("REMOTE_ADDR")} | '
                     f'field=input | words={text_result["flagged_words"]}'
                 )
                 return JsonResponse(
@@ -153,8 +154,9 @@ def humanize(request: HttpRequest) -> JsonResponse:
             voice_sample = voice_result['text']
             if voice_result['profanity_flagged']:
                 security_logger = logging.getLogger('security')
+                log_user = f'{request.user.username} (id={request.user.id})' if request.user.is_authenticated else 'Guest'
                 security_logger.warning(
-                    f'PROFANITY | ip={request.META.get("REMOTE_ADDR")} | '
+                    f'PROFANITY | user={log_user} | ip={request.META.get("REMOTE_ADDR")} | '
                     f'field=voice | words={voice_result["flagged_words"]}'
                 )
                 return JsonResponse(
@@ -170,8 +172,9 @@ def humanize(request: HttpRequest) -> JsonResponse:
 
         # Validate: no empty text
         if not text:
+            log_user = f'{request.user.username} (id={request.user.id})' if request.user.is_authenticated else 'Guest'
             api_logger.warning(
-                f'EMPTY INPUT | ip={request.META.get("REMOTE_ADDR")}'
+                f'EMPTY INPUT | user={log_user} | ip={request.META.get("REMOTE_ADDR")}'
             )
             return JsonResponse(
                 {'error': 'No text provided. Please paste some text to humanize.'},
@@ -218,18 +221,14 @@ def humanize(request: HttpRequest) -> JsonResponse:
 
             duration = round(time.time() - request_start, 2)
             track_usage(request)
-            api_logger.info(
-                f'QUICK FIX | ip={request.META.get("REMOTE_ADDR")} | '
-                f'input_words={len(text.split())} | '
-                f'output_words={len(rule_result["text"].split())} | '
-                f'patterns={len(rule_result["changes"])} | '
-                f'duration={duration}s'
-            )
+            # Calculate readability before and after
+            original_readability = flesch_reading_ease(text)
+            final_readability = flesch_reading_ease(rule_result['text'])
 
             # ── Save rewrite log ──
-            log_user = request.user if request.user.is_authenticated else None
+            log_user_obj = request.user if request.user.is_authenticated else None
             RewriteLog.objects.create(
-                user=log_user,
+                user=log_user_obj,
                 mode='quick',
                 tone='default',
                 language=language['name'],
@@ -238,9 +237,17 @@ def humanize(request: HttpRequest) -> JsonResponse:
                 input_chars=len(text),
             )
 
-            # Calculate readability before and after
-            original_readability = flesch_reading_ease(text)
-            final_readability = flesch_reading_ease(rule_result['text'])
+            log_user = f'{request.user.username} (id={request.user.id})' if request.user.is_authenticated else 'Guest'
+            api_logger.info(
+                f'QUICK FIX | user={log_user} | ip={request.META.get("REMOTE_ADDR")} | '
+                f'input_words={len(text.split())} | '
+                f'output_words={len(rule_result["text"].split())} | '
+                f'input_chars={len(text)} | '
+                f'patterns={len(rule_result["changes"])} | '
+                f'language={language["name"]} | '
+                f'readability={original_readability["score"]}→{final_readability["score"]} | '
+                f'duration={duration}s'
+            )
 
             return JsonResponse({
                 'text': rule_result['text'],
@@ -260,9 +267,11 @@ def humanize(request: HttpRequest) -> JsonResponse:
         except Exception as llm_error:
             # Log the real error server-side for debugging
             duration = round(time.time() - request_start, 2)
+            log_user = f'{request.user.username} (id={request.user.id})' if request.user.is_authenticated else 'Guest'
             api_logger.error(
-                f'LLM FAILED | ip={request.META.get("REMOTE_ADDR")} | '
+                f'LLM FAILED | user={log_user} | ip={request.META.get("REMOTE_ADDR")} | '
                 f'error={str(llm_error)} | '
+                f'language={language["name"]} | '
                 f'duration={duration}s'
             )
 
@@ -291,19 +300,14 @@ def humanize(request: HttpRequest) -> JsonResponse:
         duration = round(time.time() - request_start, 2)
         has_voice = 'yes' if voice_sample else 'no'
         track_usage(request)
-        api_logger.info(
-            f'DEEP REWRITE | ip={request.META.get("REMOTE_ADDR")} | '
-            f'input_words={len(text.split())} | '
-            f'output_words={len(llm_result["text"].split())} | '
-            f'voice_match={has_voice} | '
-            f'model={llm_result["model"]} | '
-            f'duration={duration}s'
-        )
+        # Calculate readability before and after
+        original_readability = flesch_reading_ease(text)
+        final_readability = flesch_reading_ease(llm_result['text'])
 
         # ── Save rewrite log ──
-        log_user = request.user if request.user.is_authenticated else None
+        log_user_obj = request.user if request.user.is_authenticated else None
         RewriteLog.objects.create(
-            user=log_user,
+            user=log_user_obj,
             mode='deep',
             tone=tone,
             language=language['name'],
@@ -312,9 +316,19 @@ def humanize(request: HttpRequest) -> JsonResponse:
             input_chars=len(text),
         )
 
-        # Calculate readability before and after
-        original_readability = flesch_reading_ease(text)
-        final_readability = flesch_reading_ease(llm_result['text'])
+        log_user = f'{request.user.username} (id={request.user.id})' if request.user.is_authenticated else 'Guest'
+        api_logger.info(
+            f'DEEP REWRITE | user={log_user} | ip={request.META.get("REMOTE_ADDR")} | '
+            f'input_words={len(text.split())} | '
+            f'output_words={len(llm_result["text"].split())} | '
+            f'input_chars={len(text)} | '
+            f'tone={tone} | '
+            f'voice_match={has_voice} | '
+            f'language={language["name"]} | '
+            f'readability={original_readability["score"]}→{final_readability["score"]} | '
+            f'model={llm_result["model"]} | '
+            f'duration={duration}s'
+        )
 
         return JsonResponse({
             'text': llm_result['text'],
@@ -334,8 +348,9 @@ def humanize(request: HttpRequest) -> JsonResponse:
             status=400
         )
     except Exception as e:
+        log_user = f'{request.user.username} (id={request.user.id})' if request.user.is_authenticated else 'Guest'
         api_logger.error(
-            f'UNHANDLED ERROR | ip={request.META.get("REMOTE_ADDR")} | '
+            f'UNHANDLED ERROR | user={log_user} | ip={request.META.get("REMOTE_ADDR")} | '
             f'error={str(e)}'
         )
 
@@ -534,7 +549,7 @@ def signup_view(request: HttpRequest) -> HttpResponse:
             login(request, user)
 
             api_logger.info(
-                f'SIGNUP | user={user.username} | email={user.email} | '
+                f'SIGNUP | user={user.username} (id={user.id}) | email={user.email} | '
                 f'ip={request.META.get("REMOTE_ADDR")}'
             )
 
@@ -621,7 +636,7 @@ def login_view(request: HttpRequest) -> HttpResponse:
                             )
                             security_logger = logging.getLogger('security')
                             security_logger.warning(
-                                f'RESTRICTED LOGIN ATTEMPT | user={target_user.username} | '
+                                f'RESTRICTED LOGIN ATTEMPT | user={target_user.username} (id={target_user.id}) | '
                                 f'ip={request.META.get("REMOTE_ADDR")}'
                             )
                         else:
@@ -641,9 +656,9 @@ def login_view(request: HttpRequest) -> HttpResponse:
                 login(request, user)
 
                 api_logger.info(
-                    f'LOGIN | user={user.username} | '
-                    f'ip={request.META.get("REMOTE_ADDR")}'
-                )
+                        f'LOGIN | user={user.username} (id={user.id}) | '
+                        f'ip={request.META.get("REMOTE_ADDR")}'
+                    )
 
                 next_url = request.GET.get('next', '/')
                 return redirect(next_url)
@@ -653,7 +668,8 @@ def login_view(request: HttpRequest) -> HttpResponse:
                 security_logger = logging.getLogger('security')
                 security_logger.warning(
                     f'FAILED LOGIN | input={username_or_email} | '
-                    f'ip={request.META.get("REMOTE_ADDR")}'
+                    f'ip={request.META.get("REMOTE_ADDR")} | '
+                    f'attempted_user={username or "unknown"}'
                 )
     else:
         form = LoginForm()
@@ -677,7 +693,7 @@ def logout_view(request: HttpRequest) -> HttpResponse:
     """
     if request.method == 'POST':
         api_logger.info(
-            f'LOGOUT | user={request.user.username} | '
+            f'LOGOUT | user={request.user.username} (id={request.user.id}) | '
             f'ip={request.META.get("REMOTE_ADDR")}'
         )
         logout(request)
@@ -736,7 +752,7 @@ def profile_view(request: HttpRequest) -> HttpResponse:
                 edit_success = True
 
                 api_logger.info(
-                    f'PROFILE EDIT | user={user.username} | '
+                    f'PROFILE EDIT | user={user.username} (id={user.id}) | '
                     f'ip={request.META.get("REMOTE_ADDR")}'
                 )
 
@@ -764,18 +780,19 @@ def profile_view(request: HttpRequest) -> HttpResponse:
                     password_form = ChangePasswordForm()  # Clear the form
 
                     api_logger.info(
-                        f'PASSWORD CHANGED | user={user.username} | '
+                        f'PASSWORD CHANGED | user={user.username} (id={user.id}) | '
                         f'ip={request.META.get("REMOTE_ADDR")}'
                     )
 
         # ── Handle account deletion ──
         elif action == 'delete_account':
             username = user.username
+            user_id = user.id
             user.delete()
             logout(request)
 
             api_logger.info(
-                f'ACCOUNT DELETED | user={username} | '
+                f'ACCOUNT DELETED | user={username} (id={user_id}) | '
                 f'ip={request.META.get("REMOTE_ADDR")}'
             )
 
@@ -832,16 +849,16 @@ def admin_users_view(request: HttpRequest) -> HttpResponse:
                     target_user.is_active = False
                     target_user.save()
                     api_logger.info(
-                        f'USER RESTRICTED | admin={request.user.username} | '
-                        f'target={target_user.username} | '
+                        f'USER RESTRICTED | admin={request.user.username} (id={request.user.id}) | '
+                        f'target={target_user.username} (id={target_user.id}) | '
                         f'ip={request.META.get("REMOTE_ADDR")}'
                     )
                 elif action == 'unrestrict':
                     target_user.is_active = True
                     target_user.save()
                     api_logger.info(
-                        f'USER UNRESTRICTED | admin={request.user.username} | '
-                        f'target={target_user.username} | '
+                        f'USER UNRESTRICTED | admin={request.user.username} (id={request.user.id}) | '
+                        f'target={target_user.username} (id={target_user.id}) | '
                         f'ip={request.META.get("REMOTE_ADDR")}'
                     )
             except User.DoesNotExist:
@@ -962,7 +979,7 @@ def settings_view(request: HttpRequest) -> HttpResponse:
                 prefs_success = True
 
                 api_logger.info(
-                    f'PREFERENCES SAVED | user={user.username} | '
+                    f'PREFERENCES SAVED | user={user.username} (id={user.id}) | '
                     f'mode={prefs.default_mode} | tone={prefs.default_tone} | '
                     f'ip={request.META.get("REMOTE_ADDR")}'
                 )
@@ -972,21 +989,23 @@ def settings_view(request: HttpRequest) -> HttpResponse:
             feedback_form = FeedbackForm(request.POST)
 
             if feedback_form.is_valid():
+                category_saved = feedback_form.cleaned_data['category']
+
                 # Create the feedback record
                 Feedback.objects.create(
                     user=user,
-                    category=feedback_form.cleaned_data['category'],
+                    category=category_saved,
                     message=feedback_form.cleaned_data['message'],
+                )
+
+                api_logger.info(
+                    f'FEEDBACK SUBMITTED | user={user.username} (id={user.id}) | '
+                    f'category={category_saved} | '
+                    f'ip={request.META.get("REMOTE_ADDR")}'
                 )
 
                 feedback_success = True
                 feedback_form = FeedbackForm()  # Clear the form after success
-
-                api_logger.info(
-                    f'FEEDBACK SUBMITTED | user={user.username} | '
-                    f'category={feedback_form.cleaned_data["category"] if not feedback_success else "saved"} | '
-                    f'ip={request.META.get("REMOTE_ADDR")}'
-                )
 
     # Get user's past feedback to show below the form
     user_feedback = Feedback.objects.filter(user=user).order_by('-created_at')[:5]
