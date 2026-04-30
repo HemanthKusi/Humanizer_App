@@ -140,3 +140,90 @@ class Feedback(models.Model):
     def __str__(self):
         username = self.user.username if self.user else 'Anonymous'
         return f'{self.category} from {username} ({self.created_at.strftime("%Y-%m-%d")})'
+    
+class RewriteLog(models.Model):
+    """
+    Tracks every rewrite request for per-user analytics.
+
+    One record per successful rewrite. Used to build the stats
+    dashboard on the user's profile page.
+
+    Unlike the text log files (api.log), this data is:
+    - Queryable (filter by user, mode, date range)
+    - Permanent (doesn't get rotated or deleted)
+    - Fast (database indexes for common queries)
+
+    Fields:
+        user: Who made the request (null for anonymous/non-logged-in users)
+        mode: 'quick' or 'deep'
+        tone: Which tone was used (only relevant for deep mode)
+        language: Detected input language
+        input_words: Word count of the original text
+        output_words: Word count of the rewritten text
+        input_chars: Character count of the original text
+        created_at: When the rewrite happened
+    """
+
+    MODE_CHOICES = [
+        ('quick', 'Quick Fix'),
+        ('deep', 'Deep Rewrite'),
+    ]
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='rewrite_logs',
+        help_text='The user who made this request',
+    )
+
+    mode = models.CharField(
+        max_length=10,
+        choices=MODE_CHOICES,
+        help_text='Quick Fix or Deep Rewrite',
+    )
+
+    tone = models.CharField(
+        max_length=20,
+        default='default',
+        help_text='Which tone was selected',
+    )
+
+    language = models.CharField(
+        max_length=50,
+        default='English',
+        help_text='Detected input language',
+    )
+
+    input_words = models.IntegerField(
+        default=0,
+        help_text='Word count of the original text',
+    )
+
+    output_words = models.IntegerField(
+        default=0,
+        help_text='Word count of the rewritten text',
+    )
+
+    input_chars = models.IntegerField(
+        default=0,
+        help_text='Character count of the original text',
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text='When this rewrite happened',
+    )
+
+    class Meta:
+        ordering = ['-created_at']
+        # Indexes speed up common queries like "all rewrites by this user"
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['-created_at']),
+        ]
+
+    def __str__(self):
+        username = self.user.username if self.user else 'Anonymous'
+        return f'{self.mode} by {username} ({self.created_at.strftime("%Y-%m-%d %H:%M")})'
