@@ -1201,3 +1201,184 @@ def admin_feedback_view(request: HttpRequest) -> HttpResponse:
         'feature_count': feature_count,
         'general_count': general_count,
     })
+
+@staff_member_required(login_url='/login/')
+def admin_analytics_view(request: HttpRequest) -> HttpResponse:
+    """
+    Admin analytics dashboard — platform-wide stats.
+
+    Shows overall usage, today's activity, usage breakdown,
+    and growth comparisons (this week vs last, this month vs last).
+
+    Only accessible by staff users.
+
+    Args:
+        request: The incoming HTTP request
+
+    Returns:
+        Rendered admin_analytics.html with platform stats
+    """
+    from django.db.models import Sum, Count, Avg
+    from django.utils import timezone
+    import datetime
+    import zoneinfo
+
+    # Use admin's timezone from browser
+    user_tz_name = request.GET.get('tz', 'UTC')
+    try:
+        user_tz = zoneinfo.ZoneInfo(user_tz_name)
+    except (KeyError, Exception):
+        user_tz = zoneinfo.ZoneInfo('UTC')
+
+    now_utc = timezone.now()
+    now_local = now_utc.astimezone(user_tz)
+    today_start = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # Week boundaries
+    week_start = today_start - datetime.timedelta(days=now_local.weekday())
+    last_week_start = week_start - datetime.timedelta(weeks=1)
+    last_week_end = week_start
+
+    # Month boundaries
+    month_start = today_start.replace(day=1)
+    last_month_end = month_start
+    if month_start.month == 1:
+        last_month_start = month_start.replace(year=month_start.year - 1, month=12)
+    else:
+        last_month_start = month_start.replace(month=month_start.month - 1)
+
+    all_logs = RewriteLog.objects.all()
+    all_users = User.objects.all()
+
+    # ── Row 1: Platform overview ──
+    total_rewrites = all_logs.count()
+    total_users = all_users.count()
+    total_words = all_logs.aggregate(total=Sum('input_words'))['total'] or 0
+    total_feedback = Feedback.objects.count()
+
+    # ── Row 2: Today's activity ──
+    today_logs = all_logs.filter(created_at__gte=today_start)
+    rewrites_today = today_logs.count()
+    new_users_today = all_users.filter(date_joined__gte=today_start).count()
+    active_users_today = today_logs.values('user').distinct().count()
+    words_today = today_logs.aggregate(total=Sum('input_words'))['total'] or 0
+
+    # ── Row 3: Usage breakdown ──
+
+    # Quick Fix vs Deep Rewrite
+    quick_count = all_logs.filter(mode='quick').count()
+    deep_count = all_logs.filter(mode='deep').count()
+    quick_pct = round((quick_count / total_rewrites) * 100) if total_rewrites > 0 else 0
+    deep_pct = round((deep_count / total_rewrites) * 100) if total_rewrites > 0 else 0
+
+    # Top 3 tones
+    top_tones = (
+        all_logs.values('tone')
+        .annotate(count=Count('id'))
+        .order_by('-count')[:3]
+    )
+    top_tones_list = []
+    for t in top_tones:
+        pct = round((t['count'] / total_rewrites) * 100) if total_rewrites > 0 else 0
+        top_tones_list.append({
+            'name': t['tone'].capitalize(),
+            'count': t['count'],
+            'pct': pct,
+        })
+
+    # Top 3 languages
+    top_langs = (
+        all_logs.values('language')
+        .annotate(count=Count('id'))
+        .order_by('-count')[:3]
+    )
+    top_langs_list = []
+    for l in top_langs:
+        pct = round((l['count'] / total_rewrites) * 100) if total_rewrites > 0 else 0
+        top_langs_list.append({
+            'name': l['language'],
+            'count': l['count'],
+            'pct': pct,
+        })
+
+    # Average input length
+    avg_input = all_logs.aggregate(avg=Avg('input_words'))['avg']
+    avg_input_words = round(avg_input) if avg_input else 0
+
+    # ── Row 4: Growth ──
+
+    # This week vs last week
+    rewrites_this_week = all_logs.filter(created_at__gte=week_start).count()
+    rewrites_last_week = all_logs.filter(
+        created_at__gte=last_week_start,
+        created_at__lt=last_week_end
+    ).count()
+
+    users_this_week = all_users.filter(date_joined__gte=week_start).count()
+    users_last_week = all_users.filter(
+        date_joined__gte=last_week_start,
+        date_joined__lt=last_week_end
+    ).count()
+
+    # This month vs last month
+    rewrites_this_month = all_logs.filter(created_at__gte=month_start).count()
+    rewrites_last_month = all_logs.filter(
+        created_at__gte=last_month_start,
+        created_at__lt=last_month_end
+    ).count()
+
+    users_this_month = all_users.filter(date_joined__gte=month_start).count()
+    users_last_month = all_users.filter(
+        date_joined__gte=last_month_start,
+        date_joined__lt=last_month_end
+    ).count()
+
+    # Calculate change percentages
+    def calc_change(current, previous):
+        """Calculate percentage change between two values."""
+        if previous == 0:
+            return '+100' if current > 0 else '0'
+        change = round(((current - previous) / previous) * 100)
+        return f'+{change}' if change >= 0 else str(change)
+
+    # Unread feedback count for tab badge
+    unread_feedback = Feedback.objects.filter(is_read=False).count()
+
+    stats = {
+        # Row 1
+        'total_rewrites': total_rewrites,
+        'total_users': total_users,
+        'total_words': total_words,
+        'total_feedback': total_feedback,
+        # Row 2
+        'rewrites_today': rewrites_today,
+        'new_users_today': new_users_today,
+        'active_users_today': active_users_today,
+        'words_today': words_today,
+        # Row 3
+        'quick_count': quick_count,
+        'deep_count': deep_count,
+        'quick_pct': quick_pct,
+        'deep_pct': deep_pct,
+        'top_tones': top_tones_list,
+        'top_langs': top_langs_list,
+        'avg_input_words': avg_input_words,
+        # Row 4
+        'rewrites_this_week': rewrites_this_week,
+        'rewrites_last_week': rewrites_last_week,
+        'rewrites_week_change': calc_change(rewrites_this_week, rewrites_last_week),
+        'users_this_week': users_this_week,
+        'users_last_week': users_last_week,
+        'users_week_change': calc_change(users_this_week, users_last_week),
+        'rewrites_this_month': rewrites_this_month,
+        'rewrites_last_month': rewrites_last_month,
+        'rewrites_month_change': calc_change(rewrites_this_month, rewrites_last_month),
+        'users_this_month': users_this_month,
+        'users_last_month': users_last_month,
+        'users_month_change': calc_change(users_this_month, users_last_month),
+    }
+
+    return render(request, 'core/admin_analytics.html', {
+        'stats': stats,
+        'unread_feedback': unread_feedback,
+    })

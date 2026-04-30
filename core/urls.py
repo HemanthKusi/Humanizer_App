@@ -53,6 +53,9 @@ urlpatterns = [
     # Admin feedback management page
     # This is a custom admin page we create at /manage/feedback/ for staff users to manage user feedback.
     path('manage/feedback/', views.admin_feedback_view, name='admin_feedback'),
+    # Admin analytics page
+    # This is a custom admin page we create at /manage/analytics/ for staff users to view overall usage analytics.
+    path('manage/analytics/', views.admin_analytics_view, name='admin_analytics'),
 
     # ── API endpoints ──
 
