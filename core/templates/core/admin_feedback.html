@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feedback — Rewright Admin</title>
+    <link rel="icon" href="{% static 'core/favicon.svg' %}" type="image/svg+xml">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="{% static 'core/style.css' %}">
+</head>
+<body>
+
+    <!-- Backgrounds -->
+    <canvas id="solar-system"></canvas>
+    <div class="bg-aurora"></div>
+    <div class="bg-grain"></div>
+
+    <!-- ─── HEADER ──────────────────────────────────── -->
+    <header>
+        <a href="/" class="logo">
+            <div class="logo-mark">
+                <svg width="40" height="40" viewBox="0 0 32 32" fill="none">
+                    <ellipse cx="16" cy="16" rx="12" ry="12" stroke="var(--accent)" stroke-width="1" opacity="0.2"/>
+                    <ellipse cx="16" cy="16" rx="12" ry="5" stroke="var(--accent)" stroke-width="0.8" opacity="0.15" transform="rotate(-20 16 16)"/>
+                    <circle cx="16" cy="16" r="4.5" fill="var(--accent)"/>
+                    <circle cx="14.5" cy="14.5" r="2" fill="white" opacity="0.3"/>
+                    <circle cx="16" cy="16" r="2" fill="var(--accent)" opacity="0.8" class="logo-planet"/>
+                </svg>
+            </div>
+            <span class="logo-text">Rewright</span>
+        </a>
+
+        <nav class="header-nav">
+            <a href="{% url 'admin_users' %}" class="nav-link">Admin</a>
+            <a href="{% url 'settings' %}" class="nav-link">Settings</a>
+            <a href="{% url 'profile' %}" class="nav-link">{{ user.username }}</a>
+            <form method="POST" action="{% url 'logout' %}" class="nav-logout-form">
+                {% csrf_token %}
+                <button type="submit" class="nav-link nav-logout">Log out</button>
+            </form>
+        </nav>
+    </header>
+
+    <!-- ─── ADMIN CONTENT ───────────────────────────── -->
+    <main class="auth-main">
+        <div class="admin-container">
+
+            <h1 class="admin-page-title">Feedback</h1>
+
+            <!-- ── Admin tabs ── -->
+            <div class="admin-tabs">
+                <a href="{% url 'admin_users' %}" class="admin-tab">Users</a>
+                <a href="{% url 'admin_feedback' %}" class="admin-tab active">
+                    Feedback
+                    {% if unread_count > 0 %}
+                        <span class="admin-tab-badge">{{ unread_count }}</span>
+                    {% endif %}
+                </a>
+            </div>
+
+            <!-- ── Stats cards ── -->
+            <div class="admin-stats">
+                <div class="admin-stat-card">
+                    <span class="admin-stat-number">{{ total_feedback }}</span>
+                    <span class="admin-stat-label">Total</span>
+                </div>
+                <div class="admin-stat-card">
+                    <span class="admin-stat-number admin-stat-restricted">{{ unread_count }}</span>
+                    <span class="admin-stat-label">Unread</span>
+                </div>
+                <div class="admin-stat-card">
+                    <span class="admin-stat-number" style="color: #991b1b;">{{ bug_count }}</span>
+                    <span class="admin-stat-label">Bugs</span>
+                </div>
+                <div class="admin-stat-card">
+                    <span class="admin-stat-number" style="color: #1e40af;">{{ feature_count }}</span>
+                    <span class="admin-stat-label">Features</span>
+                </div>
+            </div>
+
+            <!-- ── Filter bar ── -->
+            <div class="admin-toolbar">
+                <div class="admin-filters">
+                    <span class="filter-group-label">Category:</span>
+                    <a href="{% url 'admin_feedback' %}{% if status != 'all' %}?status={{ status }}{% endif %}"
+                       class="admin-filter-btn {% if category == 'all' %}active{% endif %}">
+                        All
+                    </a>
+                    <a href="{% url 'admin_feedback' %}?category=bug{% if status != 'all' %}&status={{ status }}{% endif %}"
+                       class="admin-filter-btn {% if category == 'bug' %}active{% endif %}">
+                        Bugs
+                    </a>
+                    <a href="{% url 'admin_feedback' %}?category=feature{% if status != 'all' %}&status={{ status }}{% endif %}"
+                       class="admin-filter-btn {% if category == 'feature' %}active{% endif %}">
+                        Features
+                    </a>
+                    <a href="{% url 'admin_feedback' %}?category=general{% if status != 'all' %}&status={{ status }}{% endif %}"
+                       class="admin-filter-btn {% if category == 'general' %}active{% endif %}">
+                        General
+                    </a>
+                </div>
+
+                <div class="admin-filters">
+                    <span class="filter-group-label">Status:</span>
+                    <a href="{% url 'admin_feedback' %}{% if category != 'all' %}?category={{ category }}{% endif %}"
+                       class="admin-filter-btn {% if status == 'all' %}active{% endif %}">
+                        All
+                    </a>
+                    <a href="{% url 'admin_feedback' %}?status=unread{% if category != 'all' %}&category={{ category }}{% endif %}"
+                       class="admin-filter-btn {% if status == 'unread' %}active{% endif %}">
+                        Unread
+                    </a>
+                    <a href="{% url 'admin_feedback' %}?status=read{% if category != 'all' %}&category={{ category }}{% endif %}"
+                       class="admin-filter-btn {% if status == 'read' %}active{% endif %}">
+                        Read
+                    </a>
+                </div>
+            </div>
+
+            <!-- ── Feedback list ── -->
+            <div class="feedback-admin-list">
+                {% for fb in feedback_list %}
+                    <div class="feedback-admin-item {% if not fb.is_read %}feedback-unread{% endif %}" data-id="{{ fb.id }}">
+                        <div class="feedback-admin-header">
+                            <div class="feedback-admin-left">
+                                {% if not fb.is_read %}
+                                    <span class="feedback-unread-dot"></span>
+                                {% endif %}
+                                <span class="feedback-category-badge badge-{{ fb.category }}">{{ fb.get_category_display }}</span>
+                                <span class="feedback-admin-user">
+                                    {% if fb.user %}{{ fb.user.username }}{% else %}Deleted user{% endif %}
+                                </span>
+                            </div>
+                            <div class="feedback-admin-right">
+                                <span class="feedback-date">{{ fb.created_at|date:"M j, Y · g:i A" }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Preview (truncated) — click to expand -->
+                        <div class="feedback-admin-preview" onclick="this.parentElement.classList.toggle('expanded')">
+                            <p class="feedback-message">{{ fb.message|truncatewords:30 }}</p>
+                            <span class="feedback-expand-hint">Click to expand</span>
+                        </div>
+
+                        <!-- Full message (hidden until expanded) -->
+                        <div class="feedback-admin-full">
+                            <p class="feedback-message">{{ fb.message }}</p>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="feedback-admin-actions">
+                            <form method="POST" action="{% url 'admin_feedback' %}" style="display:inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="feedback_id" value="{{ fb.id }}">
+                                <input type="hidden" name="current_category" value="{{ category }}">
+                                <input type="hidden" name="current_status" value="{{ status }}">
+                                {% if fb.is_read %}
+                                    <input type="hidden" name="action" value="mark_unread">
+                                    <button type="submit" class="feedback-action-btn">Mark unread</button>
+                                {% else %}
+                                    <input type="hidden" name="action" value="mark_read">
+                                    <button type="submit" class="feedback-action-btn feedback-action-primary">Mark as read</button>
+                                {% endif %}
+                            </form>
+
+                            <form method="POST" action="{% url 'admin_feedback' %}" style="display:inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="feedback_id" value="{{ fb.id }}">
+                                <input type="hidden" name="action" value="delete_feedback">
+                                <input type="hidden" name="current_category" value="{{ category }}">
+                                <input type="hidden" name="current_status" value="{{ status }}">
+                                <button type="submit" class="feedback-action-btn feedback-action-danger"
+                                        onclick="return confirm('Delete this feedback permanently?')">
+                                    Delete
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="feedback-admin-empty">
+                        {% if category != 'all' or status != 'all' %}
+                            No feedback matching these filters.
+                        {% else %}
+                            No feedback submitted yet.
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+
+        </div>
+    </main>
+
+    <script src="{% static 'core/main.js' %}"></script>
+</body>
+</html>

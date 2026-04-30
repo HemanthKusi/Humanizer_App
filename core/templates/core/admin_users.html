@@ -52,6 +52,17 @@
 
             <h1 class="admin-page-title">User Management</h1>
 
+            <!-- ── Admin tabs ── -->
+            <div class="admin-tabs">
+                <a href="{% url 'admin_users' %}" class="admin-tab active">Users</a>
+                <a href="{% url 'admin_feedback' %}" class="admin-tab">
+                    Feedback
+                    {% if unread_feedback > 0 %}
+                        <span class="admin-tab-badge">{{ unread_feedback }}</span>
+                    {% endif %}
+                </a>
+            </div>
+
             <!-- ── Stats cards ── -->
             <div class="admin-stats">
                 <div class="admin-stat-card">

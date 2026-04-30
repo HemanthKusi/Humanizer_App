@@ -859,6 +859,9 @@ def admin_users_view(request: HttpRequest) -> HttpResponse:
     restricted_users = User.objects.filter(is_active=False).count()
     staff_users = User.objects.filter(is_staff=True).count()
 
+    # Get unread feedback count for the tab badge
+    unread_feedback = Feedback.objects.filter(is_read=False).count()
+
     return render(request, 'core/admin_users.html', {
         'users': users,
         'search': search,
@@ -867,6 +870,7 @@ def admin_users_view(request: HttpRequest) -> HttpResponse:
         'active_users': active_users,
         'restricted_users': restricted_users,
         'staff_users': staff_users,
+        'unread_feedback': unread_feedback,
     })
 
 def inactive_redirect_view(request: HttpRequest) -> HttpResponse:

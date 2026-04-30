@@ -3003,3 +3003,322 @@ body.premium .badge-general {
     background: rgba(34, 197, 94, 0.15);
     color: #86efac;
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   ADMIN TABS — Switch between Users and Feedback
+   ═══════════════════════════════════════════════════════════════════ */
+
+.admin-tabs {
+    display: flex;
+    gap: 0.25rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.25rem;
+    backdrop-filter: blur(20px);
+}
+
+.admin-tab {
+    flex: 1;
+    text-align: center;
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+}
+
+.admin-tab:hover {
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+}
+
+.admin-tab.active {
+    color: #fff;
+    background: var(--accent);
+    font-weight: 600;
+}
+
+.admin-tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 0.35rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #fff;
+    background: #dc2626;
+    border-radius: 10px;
+}
+
+.admin-tab.active .admin-tab-badge {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* ── Filter group label ── */
+.filter-group-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-right: 0.25rem;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   ADMIN FEEDBACK LIST
+   ═══════════════════════════════════════════════════════════════════ */
+
+.feedback-admin-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.feedback-admin-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    backdrop-filter: blur(20px);
+    transition: all 0.2s ease;
+}
+
+/* Unread items have a left accent border */
+.feedback-unread {
+    border-left: 3px solid var(--accent);
+}
+
+/* ── Header row ── */
+.feedback-admin-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.6rem;
+}
+
+.feedback-admin-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.feedback-admin-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Unread dot indicator */
+.feedback-unread-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+}
+
+.feedback-admin-user {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* ── Preview (click to expand) ── */
+.feedback-admin-preview {
+    cursor: pointer;
+    position: relative;
+}
+
+.feedback-admin-preview .feedback-message {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    line-height: 1.5;
+    margin: 0;
+}
+
+.feedback-expand-hint {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+    display: block;
+}
+
+/* Full message — hidden by default */
+.feedback-admin-full {
+    display: none;
+}
+
+.feedback-admin-full .feedback-message {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    line-height: 1.6;
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+/* When expanded: hide preview, show full */
+.feedback-admin-item.expanded .feedback-admin-preview {
+    display: none;
+}
+
+.feedback-admin-item.expanded .feedback-admin-full {
+    display: block;
+}
+
+/* ── Action buttons ── */
+.feedback-admin-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+}
+
+.feedback-action-btn {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--text-secondary);
+}
+
+.feedback-action-btn:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.feedback-action-primary {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.feedback-action-primary:hover {
+    background: var(--accent);
+    color: #fff;
+}
+
+.feedback-action-danger {
+    color: #dc2626;
+    border-color: #dc2626;
+}
+
+.feedback-action-danger:hover {
+    background: #dc2626;
+    color: #fff;
+}
+
+/* ── Empty state ── */
+.feedback-admin-empty {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    backdrop-filter: blur(20px);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   ADMIN FEEDBACK — Dark mode overrides
+   ═══════════════════════════════════════════════════════════════════ */
+
+body.premium .admin-tabs {
+    background: rgba(15, 15, 25, 0.85);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+body.premium .admin-tab {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+body.premium .admin-tab:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+body.premium .admin-tab.active {
+    color: #fff;
+    background: var(--accent);
+}
+
+body.premium .admin-tab-badge {
+    background: #f87171;
+}
+
+body.premium .admin-tab.active .admin-tab-badge {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+body.premium .feedback-admin-item {
+    background: rgba(15, 15, 25, 0.85);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+body.premium .feedback-unread {
+    border-left-color: var(--accent);
+}
+
+body.premium .feedback-admin-user {
+    color: #e2e8f0;
+}
+
+body.premium .feedback-admin-preview .feedback-message,
+body.premium .feedback-admin-full .feedback-message {
+    color: #e2e8f0;
+}
+
+body.premium .feedback-admin-actions {
+    border-color: rgba(255, 255, 255, 0.06);
+}
+
+body.premium .feedback-action-btn {
+    color: rgba(255, 255, 255, 0.5);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+body.premium .feedback-action-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+}
+
+body.premium .feedback-action-primary {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+body.premium .feedback-action-primary:hover {
+    background: var(--accent);
+    color: #fff;
+}
+
+body.premium .feedback-action-danger {
+    color: #f87171;
+    border-color: #f87171;
+}
+
+body.premium .feedback-action-danger:hover {
+    background: #f87171;
+    color: #0f0f19;
+}
+
+body.premium .feedback-admin-empty {
+    background: rgba(15, 15, 25, 0.85);
+    border-color: rgba(255, 255, 255, 0.08);
+}
