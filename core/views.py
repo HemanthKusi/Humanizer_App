@@ -972,3 +972,97 @@ def settings_view(request: HttpRequest) -> HttpResponse:
         'user_feedback': user_feedback,
         'current_prefs': prefs,
     })
+
+
+@staff_member_required(login_url='/login/')
+def admin_feedback_view(request: HttpRequest) -> HttpResponse:
+    """
+    Admin page for viewing and managing user feedback.
+
+    Features:
+    - View all feedback submissions
+    - Filter by category (bug, feature, general)
+    - Mark individual feedback as read/unread
+    - Expand to see full message
+
+    Only accessible by staff users.
+
+    Args:
+        request: The incoming HTTP request
+
+    Returns:
+        Rendered admin_feedback.html with feedback list
+    """
+
+    # ── Handle mark as read/unread actions (POST) ──
+    if request.method == 'POST':
+        action = request.POST.get('action', '')
+        feedback_id = request.POST.get('feedback_id', '')
+
+        if feedback_id:
+            try:
+                fb = Feedback.objects.get(id=feedback_id)
+
+                if action == 'mark_read':
+                    fb.is_read = True
+                    fb.save()
+                elif action == 'mark_unread':
+                    fb.is_read = False
+                    fb.save()
+                elif action == 'delete_feedback':
+                    fb.delete()
+
+            except Feedback.DoesNotExist:
+                pass
+
+        # Preserve current filters in redirect
+        category = request.POST.get('current_category', '')
+        status = request.POST.get('current_status', '')
+        params = []
+        if category:
+            params.append(f'category={category}')
+        if status:
+            params.append(f'status={status}')
+        redirect_url = '/manage/feedback/'
+        if params:
+            redirect_url += '?' + '&'.join(params)
+        return redirect(redirect_url)
+
+    # ── GET: Build the feedback list ──
+
+    # Category filter
+    category = request.GET.get('category', 'all')
+
+    # Read status filter
+    status = request.GET.get('status', 'all')
+
+    # Start with all feedback
+    feedback_list = Feedback.objects.all().order_by('-created_at')
+
+    # Apply category filter
+    if category in ['bug', 'feature', 'general']:
+        feedback_list = feedback_list.filter(category=category)
+
+    # Apply read status filter
+    if status == 'unread':
+        feedback_list = feedback_list.filter(is_read=False)
+    elif status == 'read':
+        feedback_list = feedback_list.filter(is_read=True)
+
+    # Stats
+    total_feedback = Feedback.objects.count()
+    unread_count = Feedback.objects.filter(is_read=False).count()
+    bug_count = Feedback.objects.filter(category='bug').count()
+    feature_count = Feedback.objects.filter(category='feature').count()
+    general_count = Feedback.objects.filter(category='general').count()
+
+    return render(request, 'core/admin_feedback.html', {
+        'feedback_list': feedback_list,
+        'category': category,
+        'status': status,
+        'total_feedback': total_feedback,
+        'unread_count': unread_count,
+        'bug_count': bug_count,
+        'feature_count': feature_count,
+        'general_count': general_count,
+    })

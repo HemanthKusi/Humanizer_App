@@ -47,6 +47,9 @@ urlpatterns = [
     # User settings page
     # The user sees this when they click "Settings" on their profile.
     path('settings/', views.settings_view, name='settings'),
+    # Admin feedback management page
+    # This is a custom admin page we create at /manage/feedback/ for staff users to manage user feedback.
+    path('manage/feedback/', views.admin_feedback_view, name='admin_feedback'),
 
     # ── API endpoints ──
 
