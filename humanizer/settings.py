@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount',            # Social auth base
     'allauth.socialaccount.providers.google',  # Google provider
 
+    'django.contrib.humanize',       # Template filters: intcomma, timesince, etc.
     'core',                      # Our main app
 ]
 

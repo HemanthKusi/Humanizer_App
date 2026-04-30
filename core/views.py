@@ -36,7 +36,7 @@ from .readability import flesch_reading_ease
 
 from .language import detect_language
 
-from .models import UserPreferences, Feedback
+from .models import UserPreferences, Feedback, RewriteLog
 
 def track_usage(request):
     """
@@ -179,7 +179,6 @@ def humanize(request: HttpRequest) -> JsonResponse:
             )
 
         # Validate: length limit
-        # Validate: length limit
         if len(text) > 5000:
             return JsonResponse(
                 {'error': 'Text is too long. Please keep it under 5,000 characters.'},
@@ -225,6 +224,18 @@ def humanize(request: HttpRequest) -> JsonResponse:
                 f'output_words={len(rule_result["text"].split())} | '
                 f'patterns={len(rule_result["changes"])} | '
                 f'duration={duration}s'
+            )
+
+            # ── Save rewrite log ──
+            log_user = request.user if request.user.is_authenticated else None
+            RewriteLog.objects.create(
+                user=log_user,
+                mode='quick',
+                tone='default',
+                language=language['name'],
+                input_words=len(text.split()),
+                output_words=len(rule_result['text'].split()),
+                input_chars=len(text),
             )
 
             # Calculate readability before and after
@@ -287,6 +298,18 @@ def humanize(request: HttpRequest) -> JsonResponse:
             f'voice_match={has_voice} | '
             f'model={llm_result["model"]} | '
             f'duration={duration}s'
+        )
+
+        # ── Save rewrite log ──
+        log_user = request.user if request.user.is_authenticated else None
+        RewriteLog.objects.create(
+            user=log_user,
+            mode='deep',
+            tone=tone,
+            language=language['name'],
+            input_words=len(text.split()),
+            output_words=len(llm_result['text'].split()),
+            input_chars=len(text),
         )
 
         # Calculate readability before and after
@@ -977,6 +1000,114 @@ def settings_view(request: HttpRequest) -> HttpResponse:
         'current_prefs': prefs,
     })
 
+@login_required
+def analytics_view(request: HttpRequest) -> HttpResponse:
+    """
+    User analytics page — personal usage stats.
+
+    Shows:
+    - Row 1: Total rewrites, words processed, words generated, chars processed
+    - Row 2: Most used mode, tone, language, average input length
+    - Row 3: Rewrites today, this week, this month, last rewrite time
+
+    Only accessible by logged-in users.
+
+    Args:
+        request: The incoming HTTP request
+
+    Returns:
+        Rendered analytics.html with stats
+    """
+    from django.db.models import Sum, Count, Avg
+    from django.utils import timezone
+    import datetime
+
+    user = request.user
+    user_logs = RewriteLog.objects.filter(user=user)
+
+    # ── Row 1: Big numbers ──
+    total_rewrites = user_logs.count()
+    words_processed = user_logs.aggregate(total=Sum('input_words'))['total'] or 0
+    words_generated = user_logs.aggregate(total=Sum('output_words'))['total'] or 0
+    chars_processed = user_logs.aggregate(total=Sum('input_chars'))['total'] or 0
+
+    # ── Row 2: Usage breakdown ──
+
+    # Most used mode
+    mode_counts = user_logs.values('mode').annotate(count=Count('id')).order_by('-count')
+    if mode_counts:
+        top_mode = mode_counts[0]
+        most_used_mode = 'Deep Rewrite' if top_mode['mode'] == 'deep' else 'Quick Fix'
+        mode_pct = round((top_mode['count'] / total_rewrites) * 100) if total_rewrites > 0 else 0
+    else:
+        most_used_mode = '—'
+        mode_pct = 0
+
+    # Most used tone
+    tone_counts = user_logs.values('tone').annotate(count=Count('id')).order_by('-count')
+    if tone_counts:
+        top_tone = tone_counts[0]
+        most_used_tone = top_tone['tone'].capitalize()
+        tone_pct = round((top_tone['count'] / total_rewrites) * 100) if total_rewrites > 0 else 0
+    else:
+        most_used_tone = '—'
+        tone_pct = 0
+
+    # Most used language
+    lang_counts = user_logs.values('language').annotate(count=Count('id')).order_by('-count')
+    if lang_counts:
+        top_lang = lang_counts[0]
+        most_used_lang = top_lang['language']
+        lang_pct = round((top_lang['count'] / total_rewrites) * 100) if total_rewrites > 0 else 0
+    else:
+        most_used_lang = '—'
+        lang_pct = 0
+
+    # Average input length
+    avg_input = user_logs.aggregate(avg=Avg('input_words'))['avg']
+    avg_input_words = round(avg_input) if avg_input else 0
+
+    # ── Row 3: Activity ──
+    # Use the user's timezone from the browser for accurate "today/this week" counts
+    import zoneinfo
+    user_tz_name = request.GET.get('tz', 'UTC')
+    try:
+        user_tz = zoneinfo.ZoneInfo(user_tz_name)
+    except (KeyError, Exception):
+        user_tz = zoneinfo.ZoneInfo('UTC')
+
+    now_utc = timezone.now()
+    now_local = now_utc.astimezone(user_tz)
+    today_start = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = today_start - datetime.timedelta(days=now_local.weekday())
+    month_start = today_start.replace(day=1)
+
+    rewrites_today = user_logs.filter(created_at__gte=today_start).count()
+    rewrites_week = user_logs.filter(created_at__gte=week_start).count()
+    rewrites_month = user_logs.filter(created_at__gte=month_start).count()
+
+    last_rewrite = user_logs.first()
+    last_rewrite_time = last_rewrite.created_at.astimezone(user_tz) if last_rewrite else None
+
+    stats = {
+        'total_rewrites': total_rewrites,
+        'words_processed': words_processed,
+        'words_generated': words_generated,
+        'chars_processed': chars_processed,
+        'most_used_mode': most_used_mode,
+        'mode_pct': mode_pct,
+        'most_used_tone': most_used_tone,
+        'tone_pct': tone_pct,
+        'most_used_lang': most_used_lang,
+        'lang_pct': lang_pct,
+        'avg_input_words': avg_input_words,
+        'rewrites_today': rewrites_today,
+        'rewrites_week': rewrites_week,
+        'rewrites_month': rewrites_month,
+        'last_rewrite_time': last_rewrite_time,
+    }
+
+    return render(request, 'core/analytics.html', {'stats': stats})
 
 @staff_member_required(login_url='/login/')
 def admin_feedback_view(request: HttpRequest) -> HttpResponse:
