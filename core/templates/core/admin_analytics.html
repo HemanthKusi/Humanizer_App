@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+{% load humanize %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics — Rewright Admin</title>
+    <link rel="icon" href="{% static 'core/favicon.svg' %}" type="image/svg+xml">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="{% static 'core/style.css' %}">
+</head>
+<body>
+
+    <!-- Backgrounds -->
+    <canvas id="solar-system"></canvas>
+    <div class="bg-aurora"></div>
+    <div class="bg-grain"></div>
+
+    <!-- ─── HEADER ──────────────────────────────────── -->
+    <header>
+        <a href="/" class="logo">
+            <div class="logo-mark">
+                <svg width="40" height="40" viewBox="0 0 32 32" fill="none">
+                    <ellipse cx="16" cy="16" rx="12" ry="12" stroke="var(--accent)" stroke-width="1" opacity="0.2"/>
+                    <ellipse cx="16" cy="16" rx="12" ry="5" stroke="var(--accent)" stroke-width="0.8" opacity="0.15" transform="rotate(-20 16 16)"/>
+                    <circle cx="16" cy="16" r="4.5" fill="var(--accent)"/>
+                    <circle cx="14.5" cy="14.5" r="2" fill="white" opacity="0.3"/>
+                    <circle cx="16" cy="16" r="2" fill="var(--accent)" opacity="0.8" class="logo-planet"/>
+                </svg>
+            </div>
+            <span class="logo-text">Rewright</span>
+        </a>
+
+        <nav class="header-nav">
+            <a href="{% url 'admin_users' %}" class="nav-link nav-active">Admin</a>
+            <a href="{% url 'analytics' %}" class="nav-link">Analytics</a>
+            <a href="{% url 'settings' %}" class="nav-link">Settings</a>
+            <a href="{% url 'profile' %}" class="nav-link">{{ user.username }}</a>
+            <form method="POST" action="{% url 'logout' %}" class="nav-logout-form">
+                {% csrf_token %}
+                <button type="submit" class="nav-link nav-logout">Log out</button>
+            </form>
+        </nav>
+    </header>
+
+    <!-- ─── ADMIN CONTENT ───────────────────────────── -->
+    <main class="auth-main">
+        <div class="admin-container">
+
+            <h1 class="admin-page-title">Platform Analytics</h1>
+
+            <!-- ── Admin tabs ── -->
+            <div class="admin-tabs">
+                <a href="{% url 'admin_users' %}" class="admin-tab">Users</a>
+                <a href="{% url 'admin_feedback' %}" class="admin-tab">
+                    Feedback
+                    {% if unread_feedback > 0 %}
+                        <span class="admin-tab-badge">{{ unread_feedback }}</span>
+                    {% endif %}
+                </a>
+                <a href="{% url 'admin_analytics' %}" class="admin-tab active">Analytics</a>
+            </div>
+
+            <!-- ── Row 1: Platform overview ── -->
+            <div class="analytics-section">
+                <h2 class="analytics-section-title">Platform overview</h2>
+                <div class="analytics-grid analytics-grid-4">
+                    <div class="analytics-card">
+                        <span class="analytics-number">{{ stats.total_rewrites|intcomma }}</span>
+                        <span class="analytics-label">Total rewrites</span>
+                    </div>
+                    <div class="analytics-card">
+                        <span class="analytics-number">{{ stats.total_users|intcomma }}</span>
+                        <span class="analytics-label">Total users</span>
+                    </div>
+                    <div class="analytics-card">
+                        <span class="analytics-number">{{ stats.total_words|intcomma }}</span>
+                        <span class="analytics-label">Words processed</span>
+                    </div>
+                    <div class="analytics-card">
+                        <span class="analytics-number">{{ stats.total_feedback|intcomma }}</span>
+                        <span class="analytics-label">Feedback received</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Row 2: Today's activity ── -->
+            <div class="analytics-section">
+                <h2 class="analytics-section-title">Today's activity</h2>
+                <div class="analytics-grid analytics-grid-4">
+                    <div class="analytics-card">
+                        <span class="analytics-number">{{ stats.rewrites_today|intcomma }}</span>
+                        <span class="analytics-label">Rewrites today</span>
+                    </div>
+                    <div class="analytics-card">
+                        <span class="analytics-number">{{ stats.new_users_today|intcomma }}</span>
+                        <span class="analytics-label">New users today</span>
+                    </div>
+                    <div class="analytics-card">
+                        <span class="analytics-number">{{ stats.active_users_today|intcomma }}</span>
+                        <span class="analytics-label">Active users today</span>
+                    </div>
+                    <div class="analytics-card">
+                        <span class="analytics-number">{{ stats.words_today|intcomma }}</span>
+                        <span class="analytics-label">Words today</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Row 3: Usage breakdown ── -->
+            <div class="analytics-section">
+                <h2 class="analytics-section-title">Usage breakdown</h2>
+                <div class="analytics-grid analytics-grid-4">
+
+                    <!-- Mode split -->
+                    <div class="analytics-card">
+                        <span class="analytics-label" style="margin-bottom: 0.5rem;">Mode split</span>
+                        <div class="breakdown-row">
+                            <span class="breakdown-name">Quick Fix</span>
+                            <div class="analytics-bar-wrapper">
+                                <div class="analytics-bar">
+                                    <div class="analytics-bar-fill" style="width: {{ stats.quick_pct }}%"></div>
+                                </div>
+                                <span class="analytics-pct">{{ stats.quick_pct }}%</span>
+                            </div>
+                            <span class="breakdown-count">{{ stats.quick_count }}</span>
+                        </div>
+                        <div class="breakdown-row">
+                            <span class="breakdown-name">Deep Rewrite</span>
+                            <div class="analytics-bar-wrapper">
+                                <div class="analytics-bar">
+                                    <div class="analytics-bar-fill" style="width: {{ stats.deep_pct }}%"></div>
+                                </div>
+                                <span class="analytics-pct">{{ stats.deep_pct }}%</span>
+                            </div>
+                            <span class="breakdown-count">{{ stats.deep_count }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Top tones -->
+                    <div class="analytics-card">
+                        <span class="analytics-label" style="margin-bottom: 0.5rem;">Top tones</span>
+                        {% for tone in stats.top_tones %}
+                            <div class="breakdown-row">
+                                <span class="breakdown-name">{{ tone.name }}</span>
+                                <div class="analytics-bar-wrapper">
+                                    <div class="analytics-bar">
+                                        <div class="analytics-bar-fill" style="width: {{ tone.pct }}%"></div>
+                                    </div>
+                                    <span class="analytics-pct">{{ tone.pct }}%</span>
+                                </div>
+                                <span class="breakdown-count">{{ tone.count }}</span>
+                            </div>
+                        {% empty %}
+                            <span class="text-muted">No data yet</span>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Top languages -->
+                    <div class="analytics-card">
+                        <span class="analytics-label" style="margin-bottom: 0.5rem;">Top languages</span>
+                        {% for lang in stats.top_langs %}
+                            <div class="breakdown-row">
+                                <span class="breakdown-name">{{ lang.name }}</span>
+                                <div class="analytics-bar-wrapper">
+                                    <div class="analytics-bar">
+                                        <div class="analytics-bar-fill" style="width: {{ lang.pct }}%"></div>
+                                    </div>
+                                    <span class="analytics-pct">{{ lang.pct }}%</span>
+                                </div>
+                                <span class="breakdown-count">{{ lang.count }}</span>
+                            </div>
+                        {% empty %}
+                            <span class="text-muted">No data yet</span>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Average input -->
+                    <div class="analytics-card">
+                        <span class="analytics-number">{{ stats.avg_input_words }}</span>
+                        <span class="analytics-label">Avg. input words</span>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ── Row 4: Growth ── -->
+            <div class="analytics-section">
+                <h2 class="analytics-section-title">Growth</h2>
+                <div class="analytics-grid analytics-grid-4">
+
+                    <!-- Rewrites: this week vs last -->
+                    <div class="analytics-card">
+                        <div class="growth-header">
+                            <span class="analytics-number">{{ stats.rewrites_this_week|intcomma }}</span>
+                            <span class="growth-change {% if '-' in stats.rewrites_week_change %}growth-negative{% else %}growth-positive{% endif %}">
+                                {{ stats.rewrites_week_change }}%
+                            </span>
+                        </div>
+                        <span class="analytics-label">Rewrites this week</span>
+                        <span class="growth-compare">vs {{ stats.rewrites_last_week|intcomma }} last week</span>
+                    </div>
+
+                    <!-- Users: this week vs last -->
+                    <div class="analytics-card">
+                        <div class="growth-header">
+                            <span class="analytics-number">{{ stats.users_this_week|intcomma }}</span>
+                            <span class="growth-change {% if '-' in stats.users_week_change %}growth-negative{% else %}growth-positive{% endif %}">
+                                {{ stats.users_week_change }}%
+                            </span>
+                        </div>
+                        <span class="analytics-label">New users this week</span>
+                        <span class="growth-compare">vs {{ stats.users_last_week|intcomma }} last week</span>
+                    </div>
+
+                    <!-- Rewrites: this month vs last -->
+                    <div class="analytics-card">
+                        <div class="growth-header">
+                            <span class="analytics-number">{{ stats.rewrites_this_month|intcomma }}</span>
+                            <span class="growth-change {% if '-' in stats.rewrites_month_change %}growth-negative{% else %}growth-positive{% endif %}">
+                                {{ stats.rewrites_month_change }}%
+                            </span>
+                        </div>
+                        <span class="analytics-label">Rewrites this month</span>
+                        <span class="growth-compare">vs {{ stats.rewrites_last_month|intcomma }} last month</span>
+                    </div>
+
+                    <!-- Users: this month vs last -->
+                    <div class="analytics-card">
+                        <div class="growth-header">
+                            <span class="analytics-number">{{ stats.users_this_month|intcomma }}</span>
+                            <span class="growth-change {% if '-' in stats.users_month_change %}growth-negative{% else %}growth-positive{% endif %}">
+                                {{ stats.users_month_change }}%
+                            </span>
+                        </div>
+                        <span class="analytics-label">New users this month</span>
+                        <span class="growth-compare">vs {{ stats.users_last_month|intcomma }} last month</span>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Timezone detection -->
+    <script>
+        (function () {
+            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const url = new URL(window.location.href);
+            if (!url.searchParams.has('tz') && tz) {
+                url.searchParams.set('tz', tz);
+                window.location.replace(url.toString());
+            }
+        })();
+    </script>
+
+    <script src="{% static 'core/main.js' %}"></script>
+</body>
+</html>
