@@ -153,8 +153,8 @@ body.premium {
    ═══════════════════════════════════════════════════════════════════ */
 
 header {
-    padding: 0 2.5rem;
-    height: 60px;
+    padding: 1rem 2.5rem 0;
+    height: 70px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -192,7 +192,7 @@ body.premium .logo-mark svg { filter: drop-shadow(0 0 8px var(--accent-glow)); }
 
 main {
     flex: 1;
-    padding: 0.5rem 2.5rem 3rem;
+    padding: 1.75rem 2.5rem 3rem;
     max-width: 1320px;
     width: 100%;
     margin: 0 auto;
@@ -915,8 +915,8 @@ body.premium .btn-rewrite:hover:not(:disabled) {
    ═══════════════════════════════════════════════════════════════════ */
 
 @media (max-width: 860px) {
-    main { padding: 0.5rem 1rem 2rem; }
-    header { padding: 0 1rem; }
+    main { padding: 1.25rem 1rem 2rem; }
+    header { padding: 1rem 1rem 0; }
     .logo { right: 1rem; }
     .hero h1 { font-size: 2.2rem; }
     .panels { grid-template-columns: 1fr; }
@@ -1578,17 +1578,28 @@ body.premium .language-warning p {
 .header-nav {
     display: flex;
     align-items: center;
-    gap: 0.2rem;
-    background: rgba(255, 255, 255, 0.45);
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    border-radius: 14px;
-    padding: 0.3rem;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    gap: 0.35rem;
+    background: rgba(255, 255, 255, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    border-radius: 16px;
+    padding: 0.35rem;
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
     box-shadow: 
-        0 4px 24px rgba(0, 0, 0, 0.06),
-        0 1px 2px rgba(0, 0, 0, 0.04),
-        inset 0 1px 0 rgba(255, 255, 255, 0.6);
+        0 8px 32px rgba(0, 0, 0, 0.08),
+        0 2px 4px rgba(0, 0, 0, 0.04),
+        inset 0 1px 0 rgba(255, 255, 255, 0.7),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.02);
+    transition: all 0.3s ease;
+}
+
+.header-nav:hover {
+    background: rgba(255, 255, 255, 0.45);
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.1),
+        0 2px 4px rgba(0, 0, 0, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.02);
 }
 
 .nav-greeting {
@@ -1613,17 +1624,6 @@ body.premium .language-warning p {
     background: var(--bg-secondary);
 }
 
-/* Sign up button — stands out more than log in */
-.nav-signup {
-    background: var(--accent);
-    color: #fff !important;
-    font-weight: 600;
-}
-
-.nav-signup:hover {
-    background: var(--accent-hover);
-    color: #fff !important;
-}
 
 /* Logout button styled as a link */
 .nav-logout-form {
@@ -1633,10 +1633,18 @@ body.premium .language-warning p {
 }
 
 .nav-logout {
-    background: none;
+    background: rgba(220, 38, 38, 0.08);
     border: none;
     cursor: pointer;
     font-family: inherit;
+    color: #dc2626 !important;
+    font-weight: 500;
+    border-radius: 8px;
+}
+
+.nav-logout:hover {
+    background: #dc2626 !important;
+    color: #fff !important;
 }
 
 
@@ -1844,12 +1852,18 @@ body.premium .auth-error-box p {
 }
 
 body.premium .header-nav {
-    background: rgba(20, 18, 15, 0.6);
-    border-color: rgba(240, 160, 48, 0.1);
+    background: rgba(20, 18, 15, 0.5);
+    border-color: rgba(240, 160, 48, 0.08);
     box-shadow: 
-        0 4px 24px rgba(0, 0, 0, 0.3),
-        0 1px 2px rgba(0, 0, 0, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        0 2px 4px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.03),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+}
+
+body.premium .header-nav:hover {
+    background: rgba(20, 18, 15, 0.6);
+    border-color: rgba(240, 160, 48, 0.12);
 }
 
 body.premium .nav-greeting {
@@ -1870,8 +1884,14 @@ body.premium .nav-active {
     color: #fff !important;
 }
 
-body.premium .nav-signup {
-    color: #fff;
+body.premium .nav-logout {
+    background: rgba(248, 113, 113, 0.1) !important;
+    color: #f87171 !important;
+}
+
+body.premium .nav-logout:hover {
+    background: #f87171 !important;
+    color: #0f0f19 !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
