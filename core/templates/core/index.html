@@ -38,6 +38,7 @@
 
         <nav class="header-nav">
             {% if user.is_authenticated %}
+                <a href="/" class="nav-link nav-active">Home</a>
                 {% if user.is_staff %}
                     <a href="{% url 'admin_users' %}" class="nav-link">Admin</a>
                 {% endif %}
@@ -49,6 +50,7 @@
                     <button type="submit" class="nav-link nav-logout">Log out</button>
                 </form>
             {% else %}
+                <a href="/" class="nav-link nav-active">Home</a>
                 <a href="{% url 'login' %}" class="nav-link">Log in</a>
                 <a href="{% url 'signup' %}" class="nav-link nav-signup">Sign up</a>
             {% endif %}

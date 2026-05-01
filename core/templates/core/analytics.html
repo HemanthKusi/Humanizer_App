@@ -38,6 +38,7 @@
         </a>
 
         <nav class="header-nav">
+            <a href="/" class="nav-link">Home</a>
             {% if user.is_staff %}
                 <a href="{% url 'admin_users' %}" class="nav-link">Admin</a>
             {% endif %}
@@ -194,7 +195,7 @@
             }
         })();
     </script>
-    
+
     </main>
 
     <script src="{% static 'core/main.js' %}"></script>

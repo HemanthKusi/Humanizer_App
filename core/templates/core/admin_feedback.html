@@ -37,7 +37,9 @@
         </a>
 
         <nav class="header-nav">
-            <a href="{% url 'admin_users' %}" class="nav-link">Admin</a>
+            <a href="/" class="nav-link">Home</a>
+            <a href="{% url 'admin_users' %}" class="nav-link nav-active">Admin</a>
+            <a href="{% url 'analytics' %}" class="nav-link">Analytics</a>
             <a href="{% url 'settings' %}" class="nav-link">Settings</a>
             <a href="{% url 'profile' %}" class="nav-link">{{ user.username }}</a>
             <form method="POST" action="{% url 'logout' %}" class="nav-logout-form">
