@@ -111,64 +111,7 @@
                 </form>
             </div>
 
-            <!-- ── Feedback ── -->
-            <div class="profile-card">
-                <h2 class="profile-card-title">Feedback & Suggestions</h2>
-                <p class="profile-note" style="margin-bottom: 1.25rem;">Found a bug? Have an idea? We'd love to hear from you.</p>
-
-                {% if feedback_success %}
-                    <div class="profile-success">Thanks for your feedback! We'll review it shortly.</div>
-                {% endif %}
-
-                <form method="POST" action="{% url 'settings' %}" class="profile-form" novalidate>
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="submit_feedback">
-
-                    <!-- Category -->
-                    <div class="form-group {% if feedback_form.category.errors %}has-error{% endif %}">
-                        <label for="id_category">Category</label>
-                        {{ feedback_form.category }}
-                        {% if feedback_form.category.errors %}
-                            <span class="field-error">{{ feedback_form.category.errors.0 }}</span>
-                        {% endif %}
-                    </div>
-
-                    <!-- Message -->
-                    <div class="form-group {% if feedback_form.message.errors %}has-error{% endif %}">
-                        <label for="id_message">Your feedback</label>
-                        {{ feedback_form.message }}
-                        {% if feedback_form.message.errors %}
-                            <span class="field-error">{{ feedback_form.message.errors.0 }}</span>
-                        {% endif %}
-                        <span class="field-hint">Max 2,000 characters</span>
-                    </div>
-
-                    <button type="submit" class="profile-submit">Submit feedback</button>
-                </form>
-            </div>
-
-            <!-- ── Past Feedback ── -->
-            {% if user_feedback %}
-            <div class="profile-card">
-                <h2 class="profile-card-title">Your recent feedback</h2>
-
-                <div class="feedback-history">
-                    {% for fb in user_feedback %}
-                        <div class="feedback-item">
-                            <div class="feedback-item-header">
-                                <span class="feedback-category-badge badge-{{ fb.category }}">{{ fb.get_category_display }}</span>
-                                <span class="feedback-date">{{ fb.created_at|date:"M j, Y · g:i A" }}</span>
-                            </div>
-                            <p class="feedback-message">{{ fb.message|truncatewords:40 }}</p>
-                        </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endif %}
-
-        </div>
-    </main>
-
+    {% include 'core/feedback_widget.html' %}
     <script src="{% static 'core/main.js' %}"></script>
 </body>
 </html>

@@ -428,1177 +428,1307 @@ const historyList = document.getElementById('history-list');
 const historyClear = document.getElementById('history-clear');
 const MAX_HISTORY = 5;
 
-document.querySelector('.btn-text').textContent = 'Quick Fix';
+/* ── Guard: skip all homepage logic if we're not on the homepage ── */
+if (inputText && toggleDeep && btnRewrite) {
+    document.querySelector('.btn-text').textContent = 'Quick Fix';
 
 
-/* ═══════════════════════════════════════════════════════════════════
-   3. CHARACTER COUNTERS — both panels
-   ═══════════════════════════════════════════════════════════════════ */
+    /* ═══════════════════════════════════════════════════════════════════
+    3. CHARACTER COUNTERS — both panels
+    ═══════════════════════════════════════════════════════════════════ */
 
-inputText.addEventListener('input', function () {
-    let text = this.value;
+    inputText.addEventListener('input', function () {
+        let text = this.value;
 
-    /* Silently truncate to max chars */
-    if (text.length > INPUT_MAX_CHARS) {
-        text = text.substring(0, INPUT_MAX_CHARS);
-        /* Cut at last sentence boundary within limit */
-        const lastPeriod = text.lastIndexOf('.');
-        const lastQuestion = text.lastIndexOf('?');
-        const lastExclaim = text.lastIndexOf('!');
-        const lastSentence = Math.max(lastPeriod, lastQuestion, lastExclaim);
-        if (lastSentence > INPUT_MAX_CHARS * 0.5) {
-            text = text.substring(0, lastSentence + 1);
-        }
-        this.value = text;
-    }
-
-    /* Also check word limit */
-    const wordsArr = text.trim() ? text.trim().split(/\s+/) : [];
-    if (wordsArr.length > INPUT_MAX_WORDS) {
-        /* Find the position after the 500th word */
-        let count = 0;
-        let cutIndex = 0;
-        for (let i = 0; i < text.length; i++) {
-            if (/\s/.test(text[i]) && i > 0 && !/\s/.test(text[i - 1])) {
-                count++;
-                if (count >= INPUT_MAX_WORDS) {
-                    cutIndex = i;
-                    break;
-                }
-            }
-        }
-        if (cutIndex > 0) {
-            text = text.substring(0, cutIndex);
-            /* Cut at last sentence boundary */
+        /* Silently truncate to max chars */
+        if (text.length > INPUT_MAX_CHARS) {
+            text = text.substring(0, INPUT_MAX_CHARS);
+            /* Cut at last sentence boundary within limit */
             const lastPeriod = text.lastIndexOf('.');
             const lastQuestion = text.lastIndexOf('?');
             const lastExclaim = text.lastIndexOf('!');
             const lastSentence = Math.max(lastPeriod, lastQuestion, lastExclaim);
-            if (lastSentence > text.length * 0.5) {
+            if (lastSentence > INPUT_MAX_CHARS * 0.5) {
                 text = text.substring(0, lastSentence + 1);
             }
             this.value = text;
         }
-    }
 
-    const trimmed = this.value.trim();
-    const len = trimmed.length;
-    const words = trimmed ? trimmed.split(/\s+/).length : 0;
-    inputMeta.textContent = words > 0 ? `${words.toLocaleString()} words · ${len.toLocaleString()} chars` : '0';
-    btnRewrite.disabled = len === 0;
-});
+        /* Also check word limit */
+        const wordsArr = text.trim() ? text.trim().split(/\s+/) : [];
+        if (wordsArr.length > INPUT_MAX_WORDS) {
+            /* Find the position after the 500th word */
+            let count = 0;
+            let cutIndex = 0;
+            for (let i = 0; i < text.length; i++) {
+                if (/\s/.test(text[i]) && i > 0 && !/\s/.test(text[i - 1])) {
+                    count++;
+                    if (count >= INPUT_MAX_WORDS) {
+                        cutIndex = i;
+                        break;
+                    }
+                }
+            }
+            if (cutIndex > 0) {
+                text = text.substring(0, cutIndex);
+                /* Cut at last sentence boundary */
+                const lastPeriod = text.lastIndexOf('.');
+                const lastQuestion = text.lastIndexOf('?');
+                const lastExclaim = text.lastIndexOf('!');
+                const lastSentence = Math.max(lastPeriod, lastQuestion, lastExclaim);
+                if (lastSentence > text.length * 0.5) {
+                    text = text.substring(0, lastSentence + 1);
+                }
+                this.value = text;
+            }
+        }
 
-/**
- * Update the output character/word count.
- * Called after result is displayed.
- */
-function updateOutputMeta(text) {
-    const len = text.length;
-    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-    outputMeta.textContent = `${words.toLocaleString()} words · ${len.toLocaleString()} chars`;
-}
+        const trimmed = this.value.trim();
+        const len = trimmed.length;
+        const words = trimmed ? trimmed.split(/\s+/).length : 0;
+        inputMeta.textContent = words > 0 ? `${words.toLocaleString()} words · ${len.toLocaleString()} chars` : '0';
+        btnRewrite.disabled = len === 0;
+    });
 
-
-/* ═══════════════════════════════════════════════════════════════════
-   4. TOGGLE
-   ═══════════════════════════════════════════════════════════════════ */
-
-toggleDeep.addEventListener('change', function () {
-    if (this.checked) {
-        isPremium = true;
-        document.body.classList.add('premium');
-        modeQuick.classList.remove('active');
-        modeDeep.classList.add('active');
-        document.querySelector('.btn-text').textContent = 'Deep Rewrite';
-    } else {
-        isPremium = false;
-        document.body.classList.remove('premium');
-        modeQuick.classList.add('active');
-        modeDeep.classList.remove('active');
-        document.querySelector('.btn-text').textContent = 'Quick Fix';
-        /* Reset tone selection when switching to quick fix */
-        selectedTone = 'default';
-        toneButtons.forEach(function (b) { b.classList.remove('active'); });
-        document.querySelector('[data-tone="default"]').classList.add('active');
-    }
-
-    /*
-     * If there's already a result, pulse the button to hint
-     * "press me again to rewrite with the new mode"
+    /**
+     * Update the output character/word count.
+     * Called after result is displayed.
      */
-    const hasResult = document.getElementById('output-text');
-    if (hasResult && !btnRewrite.disabled) {
-        btnRewrite.classList.add('pulse');
-        setTimeout(() => btnRewrite.classList.remove('pulse'), 800);
+    function updateOutputMeta(text) {
+        const len = text.length;
+        const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+        outputMeta.textContent = `${words.toLocaleString()} words · ${len.toLocaleString()} chars`;
     }
-});
 
-modeQuick.addEventListener('click', function () {
-    if (toggleDeep.checked) {
-        toggleDeep.checked = false;
-        toggleDeep.dispatchEvent(new Event('change'));
-    }
-});
 
-modeDeep.addEventListener('click', function () {
-    if (!toggleDeep.checked) {
-        toggleDeep.checked = true;
-        toggleDeep.dispatchEvent(new Event('change'));
-    }
-});
+    /* ═══════════════════════════════════════════════════════════════════
+    4. TOGGLE
+    ═══════════════════════════════════════════════════════════════════ */
 
-/* ═══════════════════════════════════════════════════════════════════
-   VOICE CALIBRATION
-   ═══════════════════════════════════════════════════════════════════ */
-
-/* Toggle open/close */
-voiceToggle.addEventListener('click', function () {
-    voiceSection.classList.toggle('open');
-});
-
-/* Update word/char count as user types */
-voiceSample.addEventListener('input', function () {
-    let text = this.value;
-
-    /* Silently truncate to max chars */
-    if (text.length > VOICE_MAX_CHARS) {
-        text = text.substring(0, VOICE_MAX_CHARS);
-        const lastPeriod = text.lastIndexOf('.');
-        const lastQuestion = text.lastIndexOf('?');
-        const lastExclaim = text.lastIndexOf('!');
-        const lastSentence = Math.max(lastPeriod, lastQuestion, lastExclaim);
-        if (lastSentence > VOICE_MAX_CHARS * 0.5) {
-            text = text.substring(0, lastSentence + 1);
+    toggleDeep.addEventListener('change', function () {
+        if (this.checked) {
+            isPremium = true;
+            document.body.classList.add('premium');
+            modeQuick.classList.remove('active');
+            modeDeep.classList.add('active');
+            document.querySelector('.btn-text').textContent = 'Deep Rewrite';
+        } else {
+            isPremium = false;
+            document.body.classList.remove('premium');
+            modeQuick.classList.add('active');
+            modeDeep.classList.remove('active');
+            document.querySelector('.btn-text').textContent = 'Quick Fix';
+            /* Reset tone selection when switching to quick fix */
+            selectedTone = 'default';
+            toneButtons.forEach(function (b) { b.classList.remove('active'); });
+            document.querySelector('[data-tone="default"]').classList.add('active');
         }
-        this.value = text;
-    }
 
-    /* Also check word limit */
-    const wordsArr = text.trim() ? text.trim().split(/\s+/) : [];
-    if (wordsArr.length > VOICE_MAX_WORDS) {
-        let count = 0;
-        let cutIndex = 0;
-        for (let i = 0; i < text.length; i++) {
-            if (/\s/.test(text[i]) && i > 0 && !/\s/.test(text[i - 1])) {
-                count++;
-                if (count >= VOICE_MAX_WORDS) {
-                    cutIndex = i;
-                    break;
-                }
-            }
-        }
-        if (cutIndex > 0) {
-            text = text.substring(0, cutIndex);
-            const lastPeriod = text.lastIndexOf('.');
-            const lastQuestion = text.lastIndexOf('?');
-            const lastExclaim = text.lastIndexOf('!');
-            const lastSentence = Math.max(lastPeriod, lastQuestion, lastExclaim);
-            if (lastSentence > text.length * 0.5) {
-                text = text.substring(0, lastSentence + 1);
-            }
-            this.value = text;
-        }
-    }
-
-    const trimmed = this.value.trim();
-    const len = trimmed.length;
-    const words = trimmed ? trimmed.split(/\s+/).length : 0;
-
-    voiceCount.textContent = `${words.toLocaleString()} words · ${len.toLocaleString()} chars`;
-
-    if (words >= VOICE_MIN_WORDS && len >= VOICE_MIN_CHARS) {
-        voiceCount.classList.add('valid');
-    } else {
-        voiceCount.classList.remove('valid');
-    }
-});
-
-/**
- * Check if voice sample is valid.
- * Returns:
- *   ''    — no sample provided (or toggle is off) — use default style
- *   text  — valid sample text — use voice matching
- *   null  — sample exists but too short — show error
- */
-function getVoiceSample() {
-    /* Voice matching only works in Deep Rewrite mode */
-    if (!toggleDeep.checked) return '';
-
-    const text = voiceSample.value.trim();
-
-    /* No sample at all — that's fine, it's optional */
-    if (text.length === 0) return '';
-
-    const words = text.split(/\s+/).length;
-    const chars = text.length;
-
-    /* Sample exists but too short */
-    if (words < VOICE_MIN_WORDS || chars < VOICE_MIN_CHARS) {
-        return null;
-    }
-
-    return text;
-}
-
-/* ═══════════════════════════════════════════════════════════════════
-   TONE SELECTOR
-   ═══════════════════════════════════════════════════════════════════ */
-
-toneButtons.forEach(function (btn) {
-    btn.addEventListener('click', function () {
-        /* Remove active from all buttons */
-        toneButtons.forEach(function (b) { b.classList.remove('active'); });
-
-        /* Activate clicked button */
-        this.classList.add('active');
-        selectedTone = this.getAttribute('data-tone');
-
-        /* If there's already a result, pulse the rewrite button */
+        /*
+        * If there's already a result, pulse the button to hint
+        * "press me again to rewrite with the new mode"
+        */
         const hasResult = document.getElementById('output-text');
         if (hasResult && !btnRewrite.disabled) {
             btnRewrite.classList.add('pulse');
-            setTimeout(function () { btnRewrite.classList.remove('pulse'); }, 800);
+            setTimeout(() => btnRewrite.classList.remove('pulse'), 800);
         }
     });
-});
 
-
-/* ═══════════════════════════════════════════════════════════════════
-   5. REWRITE BUTTON
-   ═══════════════════════════════════════════════════════════════════ */
-
-btnRewrite.addEventListener('click', async function () {
-    const text = inputText.value.trim();
-    if (!text) return;
-
-    /* Prevent rapid clicking */
-    const now = Date.now();
-    if (now - lastRequestTime < REQUEST_COOLDOWN) {
-        showToast('Please wait a moment before trying again.');
-        return;
-    }
-    lastRequestTime = now;
-
-    showLoading();
-
-    try {
-        const result = await callAPI(text);
-        showResult(result);
-    } catch (error) {
-        console.error('Rewrite failed:', error);
-        showError(
-            error.message,
-            error.flaggedWords || null,
-            error.field || 'input',
-            error.languageUnsupported || false
-        );
-    }
-});
-
-
-/* ═══════════════════════════════════════════════════════════════════
-   6. API CALL
-   ═══════════════════════════════════════════════════════════════════ */
-
-   /**
- * Get Django's CSRF token from cookies.
- * Django sets a cookie called 'csrftoken' — we read it and send
- * it back in the X-CSRFToken header with every POST request.
- *
- * @returns {string} The CSRF token value
- */
-function getCSRFToken() {
-    /* Try cookie first */
-    const cookies = document.cookie.split(';');
-    for (let cookie of cookies) {
-        cookie = cookie.trim();
-        if (cookie.startsWith('csrftoken=')) {
-            return cookie.substring('csrftoken='.length);
+    modeQuick.addEventListener('click', function () {
+        if (toggleDeep.checked) {
+            toggleDeep.checked = false;
+            toggleDeep.dispatchEvent(new Event('change'));
         }
-    }
-    /* Fallback to meta tag */
-    const meta = document.querySelector('meta[name="csrf-token"]');
-    return meta ? meta.getAttribute('content') : '';
-}
-
-async function callAPI(text) {
-    const deepRewrite = toggleDeep.checked;
-    /* Validate input minimum */
-    const inputWords = text.trim().split(/\s+/).length;
-    const inputChars = text.trim().length;
-
-    if (inputWords < INPUT_MIN_WORDS || inputChars < INPUT_MIN_CHARS) {
-        throw new Error(
-            `Text too short: ${inputWords} words / ${inputChars} chars. ` +
-            `Need at least ${INPUT_MIN_WORDS} words and ${INPUT_MIN_CHARS} chars.`
-        );
-    }
-    const voiceSampleText = getVoiceSample();
-
-    /* Voice sample exists but too short */
-    if (voiceSampleText === null) {
-        const words = voiceSample.value.trim().split(/\s+/).length;
-        const chars = voiceSample.value.trim().length;
-        throw new Error(
-            `Voice sample too short: ${words} words / ${chars} chars. ` +
-            `Need at least ${VOICE_MIN_WORDS} words and ${VOICE_MIN_CHARS} chars. ` +
-            `Add more text or clear the sample to use default style.`
-        );
-    }
-
-    const response = await fetch('/api/humanize/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken(),
-        },
-        body: JSON.stringify({
-            text,
-            deep_rewrite: deepRewrite,
-            voice_sample: voiceSampleText,
-            tone: deepRewrite ? selectedTone : 'default',
-        }),
     });
 
-    const data = await response.json();
-    if (!response.ok) {
-        const err = new Error(data.error || 'Something went wrong');
-        err.flaggedWords = data.flagged_words || null;
-        err.field = data.field || null;
-        err.languageUnsupported = data.language_unsupported || false;
-        throw err;
-    }
-    return data;
-}
-
-
-/* ═══════════════════════════════════════════════════════════════════
-   7. UI STATES
-   ═══════════════════════════════════════════════════════════════════ */
-
-function showLoading() {
-    btnRewrite.disabled = true;
-    document.querySelector('.btn-text').textContent = 'Rewriting...';
-    btnCopy.style.display = 'none';
-    btnRetry.style.display = 'none';
-    downloadWrapper.style.display = 'none';
-    downloadMenu.classList.remove('open');
-    outputMeta.textContent = '';
-    resultStats.style.display = 'none';
-
-    /* Remove previous changes report */
-    const existing = document.querySelector('.changes-report');
-    if (existing) existing.remove();
-
-    /* Pick loading message based on mode + voice sample */
-    let message = 'Applying pattern fixes...';
-
-    if (toggleDeep.checked) {
-        const sample = voiceSample.value.trim();
-        if (sample.length > 0) {
-            message = 'Matching your writing style...';
-        } else if (selectedTone !== 'default') {
-            const toneNames = {
-                casual: 'casual', formal: 'formal', academic: 'academic',
-                simple: 'simple', summarize: 'summarized', expand: 'expanded'
-            };
-            message = `Rewriting in ${toneNames[selectedTone] || selectedTone} style...`;
-        } else {
-            message = 'Rewriting your text...';
-        }
-    }
-
-    outputArea.innerHTML = `
-        <div class="loading-state">
-            <div class="orbital-spinner">
-                <div class="ring"></div>
-                <div class="ring"></div>
-                <div class="ring"></div>
-                <div class="core"></div>
-            </div>
-            <p>${message}</p>
-            <div class="loading-bar">
-                <div class="loading-bar-fill"></div>
-            </div>
-        </div>
-    `;
-}
-
-function showResult(result) {
-    btnRewrite.disabled = false;
-    lastRequestText = inputText.value.trim();
-    document.querySelector('.btn-text').textContent = toggleDeep.checked ? 'Deep Rewrite' : 'Quick Fix';
-
-    /* Output text */
-    outputArea.innerHTML = `<div id="output-text">${escapeHtml(result.text)}</div>`;
-
-    if (result.warning) {
-        outputArea.innerHTML += `<div class="warning-bar">${escapeHtml(result.warning)}</div>`;
-    }
-
-    /* Update output word count */
-    updateOutputMeta(result.text);
-
-    /* Show inline stats */
-    const origWords = result.stats.original_words;
-    const finalWords = result.stats.final_words;
-    const patternsFound = result.stats.patterns_found;
-
-    resultStats.innerHTML = `
-        <span>${origWords}</span> → <span>${finalWords}</span> words
-    `;
-    resultStats.style.display = 'block';
-
-    btnCopy.style.display = 'flex';
-    btnRetry.style.display = toggleDeep.checked ? 'flex' : 'none';
-    downloadWrapper.style.display = 'flex';
-
-    /* Refresh usage counter */
-    updateUsage();
-
-    /* Save to session history */
-    saveToHistory(
-        inputText.value.trim(),
-        result.text,
-        toggleDeep.checked ? 'Deep Rewrite' : 'Quick Fix',
-        selectedTone,
-        voiceSample.value.trim()
-    );
-}
-
-function showError(message, flaggedWords, field, languageUnsupported) {
-    btnRewrite.disabled = false;
-    document.querySelector('.btn-text').textContent = toggleDeep.checked ? 'Deep Rewrite' : 'Quick Fix';
-    resultStats.style.display = 'none';
-    btnRetry.style.display = 'none';
-    downloadWrapper.style.display = 'none';
-
-    /* Language warning gets a friendlier look with a switch-mode hint */
-    if (languageUnsupported) {
-        outputArea.innerHTML = `
-            <div class="output-placeholder language-warning">
-                <div class="placeholder-orb">
-                    <span style="background:#f59e0b;"></span>
-                    <span style="background:#f59e0b;"></span>
-                    <span style="background:#f59e0b;"></span>
-                </div>
-                <p>${escapeHtml(message)}</p>
-                <button class="btn-switch-deep" id="btn-switch-deep">Switch to Deep Rewrite</button>
-            </div>
-        `;
-
-        /* Let them switch mode with one click */
-        document.getElementById('btn-switch-deep').addEventListener('click', function () {
+    modeDeep.addEventListener('click', function () {
+        if (!toggleDeep.checked) {
             toggleDeep.checked = true;
             toggleDeep.dispatchEvent(new Event('change'));
-            showToast('Switched to Deep Rewrite');
-        });
-        return;
-    }
-
-    outputArea.innerHTML = `
-        <div class="output-placeholder" style="color: #dc2626;">
-            <div class="placeholder-orb">
-                <span style="background:#dc2626;"></span>
-                <span style="background:#dc2626;"></span>
-                <span style="background:#dc2626;"></span>
-            </div>
-            <p>${escapeHtml(message)}</p>
-        </div>
-    `;
-
-    /* Highlight flagged words in the source textarea */
-    if (flaggedWords && flaggedWords.length > 0) {
-        if (field === 'input') {
-            showInlineHighlights(inputText, flaggedWords);
-        } else if (field === 'voice') {
-            showInlineHighlights(voiceSample, flaggedWords);
         }
-    }
-    /* Refresh usage counter */
-    updateUsage();
-}
-
-/**
- * Temporarily replaces a textarea with a styled div showing
- * flagged words highlighted in red. When the user clicks the
- * div, it swaps back to the textarea for editing.
- *
- * @param {HTMLTextAreaElement} textarea — the textarea to highlight
- * @param {Array} words — list of flagged words
- */
-function showInlineHighlights(textarea, words) {
-    const text = textarea.value;
-
-    /* Build highlighted HTML */
-    let html = escapeHtml(text);
-    for (const word of words) {
-        const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp('\\b(' + escaped + ')\\b', 'gi');
-        html = html.replace(regex, '<span class="flagged-word">$1</span>');
-    }
-
-    /* Create a div that looks exactly like the textarea */
-    const overlay = document.createElement('div');
-    overlay.className = 'highlight-overlay';
-    overlay.innerHTML = html;
-
-    /* Match the textarea's actual height */
-    overlay.style.height = textarea.offsetHeight + 'px';
-
-    /* Hide textarea, show overlay in its place */
-    textarea.style.display = 'none';
-    textarea.parentElement.insertBefore(overlay, textarea);
-
-    /* Click overlay to go back to editing */
-    overlay.addEventListener('click', function () {
-        overlay.remove();
-        textarea.style.display = '';
-        textarea.focus();
     });
-}
+
+    /* ═══════════════════════════════════════════════════════════════════
+    VOICE CALIBRATION
+    ═══════════════════════════════════════════════════════════════════ */
+
+    /* Toggle open/close */
+    voiceToggle.addEventListener('click', function () {
+        voiceSection.classList.toggle('open');
+    });
+
+    /* Update word/char count as user types */
+    voiceSample.addEventListener('input', function () {
+        let text = this.value;
+
+        /* Silently truncate to max chars */
+        if (text.length > VOICE_MAX_CHARS) {
+            text = text.substring(0, VOICE_MAX_CHARS);
+            const lastPeriod = text.lastIndexOf('.');
+            const lastQuestion = text.lastIndexOf('?');
+            const lastExclaim = text.lastIndexOf('!');
+            const lastSentence = Math.max(lastPeriod, lastQuestion, lastExclaim);
+            if (lastSentence > VOICE_MAX_CHARS * 0.5) {
+                text = text.substring(0, lastSentence + 1);
+            }
+            this.value = text;
+        }
+
+        /* Also check word limit */
+        const wordsArr = text.trim() ? text.trim().split(/\s+/) : [];
+        if (wordsArr.length > VOICE_MAX_WORDS) {
+            let count = 0;
+            let cutIndex = 0;
+            for (let i = 0; i < text.length; i++) {
+                if (/\s/.test(text[i]) && i > 0 && !/\s/.test(text[i - 1])) {
+                    count++;
+                    if (count >= VOICE_MAX_WORDS) {
+                        cutIndex = i;
+                        break;
+                    }
+                }
+            }
+            if (cutIndex > 0) {
+                text = text.substring(0, cutIndex);
+                const lastPeriod = text.lastIndexOf('.');
+                const lastQuestion = text.lastIndexOf('?');
+                const lastExclaim = text.lastIndexOf('!');
+                const lastSentence = Math.max(lastPeriod, lastQuestion, lastExclaim);
+                if (lastSentence > text.length * 0.5) {
+                    text = text.substring(0, lastSentence + 1);
+                }
+                this.value = text;
+            }
+        }
+
+        const trimmed = this.value.trim();
+        const len = trimmed.length;
+        const words = trimmed ? trimmed.split(/\s+/).length : 0;
+
+        voiceCount.textContent = `${words.toLocaleString()} words · ${len.toLocaleString()} chars`;
+
+        if (words >= VOICE_MIN_WORDS && len >= VOICE_MIN_CHARS) {
+            voiceCount.classList.add('valid');
+        } else {
+            voiceCount.classList.remove('valid');
+        }
+    });
+
+    /**
+     * Check if voice sample is valid.
+     * Returns:
+     *   ''    — no sample provided (or toggle is off) — use default style
+     *   text  — valid sample text — use voice matching
+     *   null  — sample exists but too short — show error
+     */
+    function getVoiceSample() {
+        /* Voice matching only works in Deep Rewrite mode */
+        if (!toggleDeep.checked) return '';
+
+        const text = voiceSample.value.trim();
+
+        /* No sample at all — that's fine, it's optional */
+        if (text.length === 0) return '';
+
+        const words = text.split(/\s+/).length;
+        const chars = text.length;
+
+        /* Sample exists but too short */
+        if (words < VOICE_MIN_WORDS || chars < VOICE_MIN_CHARS) {
+            return null;
+        }
+
+        return text;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+    TONE SELECTOR
+    ═══════════════════════════════════════════════════════════════════ */
+
+    toneButtons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            /* Remove active from all buttons */
+            toneButtons.forEach(function (b) { b.classList.remove('active'); });
+
+            /* Activate clicked button */
+            this.classList.add('active');
+            selectedTone = this.getAttribute('data-tone');
+
+            /* If there's already a result, pulse the rewrite button */
+            const hasResult = document.getElementById('output-text');
+            if (hasResult && !btnRewrite.disabled) {
+                btnRewrite.classList.add('pulse');
+                setTimeout(function () { btnRewrite.classList.remove('pulse'); }, 800);
+            }
+        });
+    });
 
 
-/* ═══════════════════════════════════════════════════════════════════
-   8. CHANGES REPORT — COLLAPSIBLE
-   ═══════════════════════════════════════════════════════════════════ */
+    /* ═══════════════════════════════════════════════════════════════════
+    5. REWRITE BUTTON
+    ═══════════════════════════════════════════════════════════════════ */
 
-function buildChangesReport(changes) {
+    btnRewrite.addEventListener('click', async function () {
+        const text = inputText.value.trim();
+        if (!text) return;
 
-    const wrapper = document.createElement('div');
-    wrapper.className = 'changes-report';
+        /* Prevent rapid clicking */
+        const now = Date.now();
+        if (now - lastRequestTime < REQUEST_COOLDOWN) {
+            showToast('Please wait a moment before trying again.');
+            return;
+        }
+        lastRequestTime = now;
 
-    let items = '';
-    for (const change of changes) {
-        items += `
-            <div class="change-item">
-                <span class="change-badge">P${change.pattern}</span>
-                <div class="change-content">
-                    <strong>${escapeHtml(change.name)}</strong>
-                    <span class="change-detail">${escapeHtml(change.detail)}</span>
+        showLoading();
+
+        try {
+            const result = await callAPI(text);
+            showResult(result);
+        } catch (error) {
+            console.error('Rewrite failed:', error);
+            showError(
+                error.message,
+                error.flaggedWords || null,
+                error.field || 'input',
+                error.languageUnsupported || false
+            );
+        }
+    });
+
+
+    /* ═══════════════════════════════════════════════════════════════════
+    6. API CALL
+    ═══════════════════════════════════════════════════════════════════ */
+
+    /**
+     * Get Django's CSRF token from cookies.
+     * Django sets a cookie called 'csrftoken' — we read it and send
+     * it back in the X-CSRFToken header with every POST request.
+     *
+     * @returns {string} The CSRF token value
+     */
+    function getCSRFToken() {
+        /* Try cookie first */
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            cookie = cookie.trim();
+            if (cookie.startsWith('csrftoken=')) {
+                return cookie.substring('csrftoken='.length);
+            }
+        }
+        /* Fallback to meta tag */
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? meta.getAttribute('content') : '';
+    }
+
+    async function callAPI(text) {
+        const deepRewrite = toggleDeep.checked;
+        /* Validate input minimum */
+        const inputWords = text.trim().split(/\s+/).length;
+        const inputChars = text.trim().length;
+
+        if (inputWords < INPUT_MIN_WORDS || inputChars < INPUT_MIN_CHARS) {
+            throw new Error(
+                `Text too short: ${inputWords} words / ${inputChars} chars. ` +
+                `Need at least ${INPUT_MIN_WORDS} words and ${INPUT_MIN_CHARS} chars.`
+            );
+        }
+        const voiceSampleText = getVoiceSample();
+
+        /* Voice sample exists but too short */
+        if (voiceSampleText === null) {
+            const words = voiceSample.value.trim().split(/\s+/).length;
+            const chars = voiceSample.value.trim().length;
+            throw new Error(
+                `Voice sample too short: ${words} words / ${chars} chars. ` +
+                `Need at least ${VOICE_MIN_WORDS} words and ${VOICE_MIN_CHARS} chars. ` +
+                `Add more text or clear the sample to use default style.`
+            );
+        }
+
+        const response = await fetch('/api/humanize/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken(),
+            },
+            body: JSON.stringify({
+                text,
+                deep_rewrite: deepRewrite,
+                voice_sample: voiceSampleText,
+                tone: deepRewrite ? selectedTone : 'default',
+            }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            const err = new Error(data.error || 'Something went wrong');
+            err.flaggedWords = data.flagged_words || null;
+            err.field = data.field || null;
+            err.languageUnsupported = data.language_unsupported || false;
+            throw err;
+        }
+        return data;
+    }
+
+
+    /* ═══════════════════════════════════════════════════════════════════
+    7. UI STATES
+    ═══════════════════════════════════════════════════════════════════ */
+
+    function showLoading() {
+        btnRewrite.disabled = true;
+        document.querySelector('.btn-text').textContent = 'Rewriting...';
+        btnCopy.style.display = 'none';
+        btnRetry.style.display = 'none';
+        downloadWrapper.style.display = 'none';
+        downloadMenu.classList.remove('open');
+        outputMeta.textContent = '';
+        resultStats.style.display = 'none';
+
+        /* Remove previous changes report */
+        const existing = document.querySelector('.changes-report');
+        if (existing) existing.remove();
+
+        /* Pick loading message based on mode + voice sample */
+        let message = 'Applying pattern fixes...';
+
+        if (toggleDeep.checked) {
+            const sample = voiceSample.value.trim();
+            if (sample.length > 0) {
+                message = 'Matching your writing style...';
+            } else if (selectedTone !== 'default') {
+                const toneNames = {
+                    casual: 'casual', formal: 'formal', academic: 'academic',
+                    simple: 'simple', summarize: 'summarized', expand: 'expanded'
+                };
+                message = `Rewriting in ${toneNames[selectedTone] || selectedTone} style...`;
+            } else {
+                message = 'Rewriting your text...';
+            }
+        }
+
+        outputArea.innerHTML = `
+            <div class="loading-state">
+                <div class="orbital-spinner">
+                    <div class="ring"></div>
+                    <div class="ring"></div>
+                    <div class="ring"></div>
+                    <div class="core"></div>
+                </div>
+                <p>${message}</p>
+                <div class="loading-bar">
+                    <div class="loading-bar-fill"></div>
                 </div>
             </div>
         `;
     }
 
-    wrapper.innerHTML = `
-        <div class="changes-toggle">
-            <span class="changes-toggle-text">${changes.length} patterns detected</span>
-            <span class="changes-toggle-arrow">▾</span>
-        </div>
-        <div class="changes-list">${items}</div>
-    `;
+    function showResult(result) {
+        btnRewrite.disabled = false;
+        lastRequestText = inputText.value.trim();
+        document.querySelector('.btn-text').textContent = toggleDeep.checked ? 'Deep Rewrite' : 'Quick Fix';
 
-    wrapper.querySelector('.changes-toggle').addEventListener('click', function () {
-        wrapper.classList.toggle('open');
-    });
+        /* Output text */
+        outputArea.innerHTML = `<div id="output-text">${escapeHtml(result.text)}</div>`;
 
-    return wrapper;
-}
+        if (result.warning) {
+            outputArea.innerHTML += `<div class="warning-bar">${escapeHtml(result.warning)}</div>`;
+        }
 
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.appendChild(document.createTextNode(text));
-    return div.innerHTML;
-}
+        /* Update output word count */
+        updateOutputMeta(result.text);
 
+        /* Show inline stats */
+        const origWords = result.stats.original_words;
+        const finalWords = result.stats.final_words;
+        const patternsFound = result.stats.patterns_found;
 
-/* ═══════════════════════════════════════════════════════════════════
-   9. COPY — ICON SWAP TO CHECKMARK
-   ═══════════════════════════════════════════════════════════════════ */
+        resultStats.innerHTML = `
+            <span>${origWords}</span> → <span>${finalWords}</span> words
+        `;
+        resultStats.style.display = 'block';
 
-const ICON_COPY = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-</svg>`;
+        btnCopy.style.display = 'flex';
+        btnRetry.style.display = toggleDeep.checked ? 'flex' : 'none';
+        downloadWrapper.style.display = 'flex';
 
-const ICON_CHECK = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-    <polyline points="20 6 9 17 4 12"/>
-</svg>`;
+        /* Refresh usage counter */
+        updateUsage();
 
-btnCopy.addEventListener('click', async function () {
-    const outputText = document.getElementById('output-text');
-    if (!outputText) return;
-
-    try {
-        await navigator.clipboard.writeText(outputText.textContent);
-
-        btnCopy.innerHTML = ICON_CHECK;
-        btnCopy.classList.add('copied');
-
-        setTimeout(() => {
-            btnCopy.innerHTML = ICON_COPY;
-            btnCopy.classList.remove('copied');
-        }, 1500);
-
-        showToast('Copied to clipboard');
-    } catch (error) {
-        showToast('Could not copy — select manually');
-    }
-});
-
-/* ═══════════════════════════════════════════════════════════════════
-   RE-ROLL / TRY AGAIN
-   ═══════════════════════════════════════════════════════════════════ */
-
-btnRetry.addEventListener('click', async function () {
-    if (!lastRequestText) return;
-
-    /* Spin animation */
-    btnRetry.classList.add('spinning');
-    setTimeout(function () { btnRetry.classList.remove('spinning'); }, 600);
-
-    /* Re-send the same text with same settings */
-    showLoading();
-
-    try {
-        const result = await callAPI(lastRequestText);
-        showResult(result);
-    } catch (error) {
-        console.error('Re-roll failed:', error);
-        showError(
-            error.message,
-            error.flaggedWords || null,
-            error.field || 'input',
-            error.languageUnsupported || false
+        /* Save to session history */
+        saveToHistory(
+            inputText.value.trim(),
+            result.text,
+            toggleDeep.checked ? 'Deep Rewrite' : 'Quick Fix',
+            selectedTone,
+            voiceSample.value.trim()
         );
     }
-});
 
-/* ═══════════════════════════════════════════════════════════════════
-   DOWNLOAD WITH FORMAT MENU
-   ═══════════════════════════════════════════════════════════════════ */
+    function showError(message, flaggedWords, field, languageUnsupported) {
+        btnRewrite.disabled = false;
+        document.querySelector('.btn-text').textContent = toggleDeep.checked ? 'Deep Rewrite' : 'Quick Fix';
+        resultStats.style.display = 'none';
+        btnRetry.style.display = 'none';
+        downloadWrapper.style.display = 'none';
 
-/* Toggle the dropdown menu */
-btnDownload.addEventListener('click', function (e) {
-    e.stopPropagation();
-    downloadMenu.classList.toggle('open');
-});
+        /* Language warning gets a friendlier look with a switch-mode hint */
+        if (languageUnsupported) {
+            outputArea.innerHTML = `
+                <div class="output-placeholder language-warning">
+                    <div class="placeholder-orb">
+                        <span style="background:#f59e0b;"></span>
+                        <span style="background:#f59e0b;"></span>
+                        <span style="background:#f59e0b;"></span>
+                    </div>
+                    <p>${escapeHtml(message)}</p>
+                    <button class="btn-switch-deep" id="btn-switch-deep">Switch to Deep Rewrite</button>
+                </div>
+            `;
 
-/* Close menu when clicking anywhere else */
-document.addEventListener('click', function () {
-    downloadMenu.classList.remove('open');
-});
+            /* Let them switch mode with one click */
+            document.getElementById('btn-switch-deep').addEventListener('click', function () {
+                toggleDeep.checked = true;
+                toggleDeep.dispatchEvent(new Event('change'));
+                showToast('Switched to Deep Rewrite');
+            });
+            return;
+        }
 
-/* Prevent menu clicks from closing the menu */
-downloadMenu.addEventListener('click', function (e) {
-    e.stopPropagation();
-});
+        outputArea.innerHTML = `
+            <div class="output-placeholder" style="color: #dc2626;">
+                <div class="placeholder-orb">
+                    <span style="background:#dc2626;"></span>
+                    <span style="background:#dc2626;"></span>
+                    <span style="background:#dc2626;"></span>
+                </div>
+                <p>${escapeHtml(message)}</p>
+            </div>
+        `;
 
-/* Handle format selection */
-document.querySelectorAll('.download-option').forEach(function (btn) {
-    btn.addEventListener('click', async function () {
-        const format = this.getAttribute('data-format');
+        /* Highlight flagged words in the source textarea */
+        if (flaggedWords && flaggedWords.length > 0) {
+            if (field === 'input') {
+                showInlineHighlights(inputText, flaggedWords);
+            } else if (field === 'voice') {
+                showInlineHighlights(voiceSample, flaggedWords);
+            }
+        }
+        /* Refresh usage counter */
+        updateUsage();
+    }
+
+    /**
+     * Temporarily replaces a textarea with a styled div showing
+     * flagged words highlighted in red. When the user clicks the
+     * div, it swaps back to the textarea for editing.
+     *
+     * @param {HTMLTextAreaElement} textarea — the textarea to highlight
+     * @param {Array} words — list of flagged words
+     */
+    function showInlineHighlights(textarea, words) {
+        const text = textarea.value;
+
+        /* Build highlighted HTML */
+        let html = escapeHtml(text);
+        for (const word of words) {
+            const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp('\\b(' + escaped + ')\\b', 'gi');
+            html = html.replace(regex, '<span class="flagged-word">$1</span>');
+        }
+
+        /* Create a div that looks exactly like the textarea */
+        const overlay = document.createElement('div');
+        overlay.className = 'highlight-overlay';
+        overlay.innerHTML = html;
+
+        /* Match the textarea's actual height */
+        overlay.style.height = textarea.offsetHeight + 'px';
+
+        /* Hide textarea, show overlay in its place */
+        textarea.style.display = 'none';
+        textarea.parentElement.insertBefore(overlay, textarea);
+
+        /* Click overlay to go back to editing */
+        overlay.addEventListener('click', function () {
+            overlay.remove();
+            textarea.style.display = '';
+            textarea.focus();
+        });
+    }
+
+
+    /* ═══════════════════════════════════════════════════════════════════
+    8. CHANGES REPORT — COLLAPSIBLE
+    ═══════════════════════════════════════════════════════════════════ */
+
+    function buildChangesReport(changes) {
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'changes-report';
+
+        let items = '';
+        for (const change of changes) {
+            items += `
+                <div class="change-item">
+                    <span class="change-badge">P${change.pattern}</span>
+                    <div class="change-content">
+                        <strong>${escapeHtml(change.name)}</strong>
+                        <span class="change-detail">${escapeHtml(change.detail)}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        wrapper.innerHTML = `
+            <div class="changes-toggle">
+                <span class="changes-toggle-text">${changes.length} patterns detected</span>
+                <span class="changes-toggle-arrow">▾</span>
+            </div>
+            <div class="changes-list">${items}</div>
+        `;
+
+        wrapper.querySelector('.changes-toggle').addEventListener('click', function () {
+            wrapper.classList.toggle('open');
+        });
+
+        return wrapper;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.appendChild(document.createTextNode(text));
+        return div.innerHTML;
+    }
+
+
+    /* ═══════════════════════════════════════════════════════════════════
+    9. COPY — ICON SWAP TO CHECKMARK
+    ═══════════════════════════════════════════════════════════════════ */
+
+    const ICON_COPY = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+    </svg>`;
+
+    const ICON_CHECK = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+    </svg>`;
+
+    btnCopy.addEventListener('click', async function () {
         const outputText = document.getElementById('output-text');
         if (!outputText) return;
 
-        const text = outputText.textContent;
+        try {
+            await navigator.clipboard.writeText(outputText.textContent);
 
-        /* Close the menu */
+            btnCopy.innerHTML = ICON_CHECK;
+            btnCopy.classList.add('copied');
+
+            setTimeout(() => {
+                btnCopy.innerHTML = ICON_COPY;
+                btnCopy.classList.remove('copied');
+            }, 1500);
+
+            showToast('Copied to clipboard');
+        } catch (error) {
+            showToast('Could not copy — select manually');
+        }
+    });
+
+    /* ═══════════════════════════════════════════════════════════════════
+    RE-ROLL / TRY AGAIN
+    ═══════════════════════════════════════════════════════════════════ */
+
+    btnRetry.addEventListener('click', async function () {
+        if (!lastRequestText) return;
+
+        /* Spin animation */
+        btnRetry.classList.add('spinning');
+        setTimeout(function () { btnRetry.classList.remove('spinning'); }, 600);
+
+        /* Re-send the same text with same settings */
+        showLoading();
+
+        try {
+            const result = await callAPI(lastRequestText);
+            showResult(result);
+        } catch (error) {
+            console.error('Re-roll failed:', error);
+            showError(
+                error.message,
+                error.flaggedWords || null,
+                error.field || 'input',
+                error.languageUnsupported || false
+            );
+        }
+    });
+
+    /* ═══════════════════════════════════════════════════════════════════
+    DOWNLOAD WITH FORMAT MENU
+    ═══════════════════════════════════════════════════════════════════ */
+
+    /* Toggle the dropdown menu */
+    btnDownload.addEventListener('click', function (e) {
+        e.stopPropagation();
+        downloadMenu.classList.toggle('open');
+    });
+
+    /* Close menu when clicking anywhere else */
+    document.addEventListener('click', function () {
         downloadMenu.classList.remove('open');
+    });
 
-        if (format === 'txt') {
-            /* TXT — handle in frontend, no server needed */
-            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'rewright-output.txt';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-            showToast('Downloaded .txt');
-        } else {
-            /* DOCX and PDF — request from backend */
-            try {
-                showToast('Preparing download...');
+    /* Prevent menu clicks from closing the menu */
+    downloadMenu.addEventListener('click', function (e) {
+        e.stopPropagation();
+    });
 
-                const response = await fetch('/api/download/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCSRFToken(),
-                    },
-                    body: JSON.stringify({ text, format }),
-                });
+    /* Handle format selection */
+    document.querySelectorAll('.download-option').forEach(function (btn) {
+        btn.addEventListener('click', async function () {
+            const format = this.getAttribute('data-format');
+            const outputText = document.getElementById('output-text');
+            if (!outputText) return;
 
-                if (!response.ok) {
-                    const data = await response.json();
-                    throw new Error(data.error || 'Download failed');
-                }
+            const text = outputText.textContent;
 
-                /* Convert response to blob and download */
-                const blob = await response.blob();
+            /* Close the menu */
+            downloadMenu.classList.remove('open');
+
+            if (format === 'txt') {
+                /* TXT — handle in frontend, no server needed */
+                const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = `rewright-output.${format}`;
+                link.download = 'rewright-output.txt';
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
                 URL.revokeObjectURL(url);
+                showToast('Downloaded .txt');
+            } else {
+                /* DOCX and PDF — request from backend */
+                try {
+                    showToast('Preparing download...');
 
-                showToast(`Downloaded .${format}`);
-            } catch (error) {
-                console.error('Download failed:', error);
-                showToast('Download failed. Try .txt instead.');
+                    const response = await fetch('/api/download/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCSRFToken(),
+                        },
+                        body: JSON.stringify({ text, format }),
+                    });
+
+                    if (!response.ok) {
+                        const data = await response.json();
+                        throw new Error(data.error || 'Download failed');
+                    }
+
+                    /* Convert response to blob and download */
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `rewright-output.${format}`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+
+                    showToast(`Downloaded .${format}`);
+                } catch (error) {
+                    console.error('Download failed:', error);
+                    showToast('Download failed. Try .txt instead.');
+                }
             }
-        }
+        });
     });
-});
 
 
-/* ═══════════════════════════════════════════════════════════════════
-   SESSION HISTORY — VERTICAL SIDEBAR
-   ═══════════════════════════════════════════════════════════════════ */
+    /* ═══════════════════════════════════════════════════════════════════
+    SESSION HISTORY — VERTICAL SIDEBAR
+    ═══════════════════════════════════════════════════════════════════ */
 
-/**
- * Save a rewrite result to session history.
- */
-function saveToHistory(input, output, mode, tone, voice) {
-    let history = [];
-    try {
-        const stored = sessionStorage.getItem('rewright-history');
-        if (stored) history = JSON.parse(stored);
-    } catch (e) { }
+    /**
+     * Save a rewrite result to session history.
+     */
+    function saveToHistory(input, output, mode, tone, voice) {
+        let history = [];
+        try {
+            const stored = sessionStorage.getItem('rewright-history');
+            if (stored) history = JSON.parse(stored);
+        } catch (e) { }
 
-    const entry = {
-        input: input,
-        output: output,
-        mode: mode,
-        tone: tone,
-        voice: voice || '',
-        timestamp: Date.now(),
-        inputWords: input.trim().split(/\s+/).length,
-        outputWords: output.trim().split(/\s+/).length,
-    };
+        const entry = {
+            input: input,
+            output: output,
+            mode: mode,
+            tone: tone,
+            voice: voice || '',
+            timestamp: Date.now(),
+            inputWords: input.trim().split(/\s+/).length,
+            outputWords: output.trim().split(/\s+/).length,
+        };
 
-    history.unshift(entry);
+        history.unshift(entry);
 
-    if (history.length > MAX_HISTORY) {
-        history = history.slice(0, MAX_HISTORY);
+        if (history.length > MAX_HISTORY) {
+            history = history.slice(0, MAX_HISTORY);
+        }
+
+        try {
+            sessionStorage.setItem('rewright-history', JSON.stringify(history));
+        } catch (e) { }
+
+        renderHistory(history);
     }
 
-    try {
-        sessionStorage.setItem('rewright-history', JSON.stringify(history));
-    } catch (e) { }
-
-    renderHistory(history);
-}
-
-/**
- * Load history from sessionStorage on page load.
- */
-function loadHistory() {
-    try {
-        const stored = sessionStorage.getItem('rewright-history');
-        if (stored) {
-            const history = JSON.parse(stored);
-            renderHistory(history);
-        } else {
+    /**
+     * Load history from sessionStorage on page load.
+     */
+    function loadHistory() {
+        try {
+            const stored = sessionStorage.getItem('rewright-history');
+            if (stored) {
+                const history = JSON.parse(stored);
+                renderHistory(history);
+            } else {
+                historyList.innerHTML = renderEmptyHistory();
+                historyClear.style.display = 'none';
+            }
+        } catch (e) {
             historyList.innerHTML = renderEmptyHistory();
             historyClear.style.display = 'none';
         }
-    } catch (e) {
-        historyList.innerHTML = renderEmptyHistory();
-        historyClear.style.display = 'none';
-    }
-}
-
-/**
- * Returns HTML for the empty history state.
- */
-function renderEmptyHistory() {
-    return '<div class="history-empty">No recent history</div>';
-}
-
-/**
- * Render history items as vertical cards in the sidebar.
- */
-function renderHistory(history) {
-    if (!history || history.length === 0) {
-        historyList.innerHTML = renderEmptyHistory();
-        historyClear.style.display = 'none';
-        return;
     }
 
-    historyClear.style.display = 'flex';
+    /**
+     * Returns HTML for the empty history state.
+     */
+    function renderEmptyHistory() {
+        return '<div class="history-empty">No recent history</div>';
+    }
 
-    let html = '';
-    for (let i = 0; i < history.length; i++) {
-        const entry = history[i];
-        const ago = getTimeAgo(entry.timestamp);
-        const preview = entry.output.substring(0, 80).replace(/\n/g, ' ');
+    /**
+     * Render history items as vertical cards in the sidebar.
+     */
+    function renderHistory(history) {
+        if (!history || history.length === 0) {
+            historyList.innerHTML = renderEmptyHistory();
+            historyClear.style.display = 'none';
+            return;
+        }
 
-        const modeLabel = entry.mode === 'Quick Fix' ? 'Quick Fix' : 'Deep Rewrite';
-        const toneLabel = entry.tone && entry.tone !== 'default'
-            ? ` · ${entry.tone}`
-            : '';
+        historyClear.style.display = 'flex';
 
-        html += `
-            <div class="history-item" data-index="${i}" title="Click to load this result">
-                <div class="history-preview">${escapeHtml(preview)}...</div>
-                <div class="history-bottom">
-                    <span class="history-mode">${modeLabel}${toneLabel}</span>
-                    <span class="history-time">${ago}</span>
+        let html = '';
+        for (let i = 0; i < history.length; i++) {
+            const entry = history[i];
+            const ago = getTimeAgo(entry.timestamp);
+            const preview = entry.output.substring(0, 80).replace(/\n/g, ' ');
+
+            const modeLabel = entry.mode === 'Quick Fix' ? 'Quick Fix' : 'Deep Rewrite';
+            const toneLabel = entry.tone && entry.tone !== 'default'
+                ? ` · ${entry.tone}`
+                : '';
+
+            html += `
+                <div class="history-item" data-index="${i}" title="Click to load this result">
+                    <div class="history-preview">${escapeHtml(preview)}...</div>
+                    <div class="history-bottom">
+                        <span class="history-mode">${modeLabel}${toneLabel}</span>
+                        <span class="history-time">${ago}</span>
+                    </div>
                 </div>
+            `;
+        }
+
+        historyList.innerHTML = html;
+
+        historyList.querySelectorAll('.history-item').forEach(function (item) {
+            item.addEventListener('click', function () {
+                const index = parseInt(this.getAttribute('data-index'));
+                loadHistoryItem(index);
+
+                historyList.querySelectorAll('.history-item').forEach(function (el) {
+                    el.classList.remove('active');
+                });
+                this.classList.add('active');
+            });
+        });
+    }
+
+    /**
+     * Load a history item into the panels.
+     */
+    function loadHistoryItem(index) {
+        try {
+            const stored = sessionStorage.getItem('rewright-history');
+            if (!stored) return;
+
+            const history = JSON.parse(stored);
+            const entry = history[index];
+            if (!entry) return;
+
+            /* ── Restore mode (Quick Fix / Deep Rewrite) ── */
+            const needsDeep = entry.mode === 'Deep Rewrite';
+
+            if (needsDeep && !toggleDeep.checked) {
+                toggleDeep.checked = true;
+                toggleDeep.dispatchEvent(new Event('change'));
+            } else if (!needsDeep && toggleDeep.checked) {
+                toggleDeep.checked = false;
+                toggleDeep.dispatchEvent(new Event('change'));
+            }
+
+            /* ── Restore tone ── */
+            if (needsDeep && entry.tone) {
+                selectedTone = entry.tone;
+                toneButtons.forEach(function (btn) {
+                    btn.classList.remove('active');
+                    if (btn.getAttribute('data-tone') === entry.tone) {
+                        btn.classList.add('active');
+                    }
+                });
+            }
+
+            /* ── Restore voice sample ── */
+            if (needsDeep && entry.voice && entry.voice.length > 0) {
+                voiceSample.value = entry.voice;
+                voiceSample.dispatchEvent(new Event('input'));
+                /* Open the voice section so user can see it's loaded */
+                if (!voiceSection.classList.contains('open')) {
+                    voiceSection.classList.toggle('open');
+                }
+            } else {
+                voiceSample.value = '';
+                voiceSample.dispatchEvent(new Event('input'));
+                voiceSection.classList.remove('open');
+            }
+
+            /* ── Restore input text ── */
+            inputText.value = entry.input;
+            inputText.dispatchEvent(new Event('input'));
+
+            /* ── Restore output ── */
+            outputArea.innerHTML = `<div id="output-text">${escapeHtml(entry.output)}</div>`;
+            updateOutputMeta(entry.output);
+
+            /* ── Restore buttons ── */
+            btnCopy.style.display = 'flex';
+            btnRetry.style.display = needsDeep ? 'flex' : 'none';
+            downloadWrapper.style.display = 'flex';
+
+            /* ── Restore stats ── */
+            resultStats.innerHTML = `
+                <span>${entry.inputWords}</span> → <span>${entry.outputWords}</span> words
+            `;
+            resultStats.style.display = 'block';
+
+            showToast('Loaded from history');
+        } catch (e) {
+            console.error('Failed to load history item:', e);
+        }
+    }
+
+    /**
+     * Get a human-readable time ago string.
+     */
+    function getTimeAgo(timestamp) {
+        const seconds = Math.floor((Date.now() - timestamp) / 1000);
+        if (seconds < 30) return 'just now';
+        if (seconds < 60) return seconds + 's ago';
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return minutes + 'm ago';
+        const hours = Math.floor(minutes / 60);
+        return hours + 'h ago';
+    }
+
+    /* Toggle history open/close */
+    const historyToggle = document.getElementById('history-toggle');
+
+    historyToggle.addEventListener('click', function () {
+        historySection.classList.toggle('open');
+    });
+
+    /* Clear history with Yes/No confirmation */
+    historyClear.addEventListener('click', function (e) {
+        e.stopPropagation();
+
+        /* If already showing confirmation, ignore */
+        if (document.querySelector('.history-confirm')) return;
+
+        /* Hide the clear button */
+        this.style.display = 'none';
+
+        /* Show confirmation inline */
+        const confirm = document.createElement('div');
+        confirm.className = 'history-confirm';
+        confirm.innerHTML = `
+            <span class="confirm-text">Clear all history?</span>
+            <div class="confirm-buttons">
+                <button class="confirm-yes" id="confirm-yes">Yes</button>
+                <button class="confirm-no" id="confirm-no">No</button>
             </div>
         `;
-    }
 
-    historyList.innerHTML = html;
+        this.parentElement.appendChild(confirm);
 
-    historyList.querySelectorAll('.history-item').forEach(function (item) {
-        item.addEventListener('click', function () {
-            const index = parseInt(this.getAttribute('data-index'));
-            loadHistoryItem(index);
+        /* Yes — clear everything */
+        confirm.querySelector('.confirm-yes').addEventListener('click', function (ev) {
+            ev.stopPropagation();
+            sessionStorage.removeItem('rewright-history');
+            historyList.innerHTML = renderEmptyHistory();
+            confirm.remove();
+            historyClear.style.display = 'none';
+            showToast('History cleared');
+        });
 
-            historyList.querySelectorAll('.history-item').forEach(function (el) {
-                el.classList.remove('active');
-            });
-            this.classList.add('active');
+        /* No — cancel */
+        confirm.querySelector('.confirm-no').addEventListener('click', function (ev) {
+            ev.stopPropagation();
+            confirm.remove();
+            historyClear.style.display = 'flex';
         });
     });
-}
 
-/**
- * Load a history item into the panels.
- */
-function loadHistoryItem(index) {
-    try {
-        const stored = sessionStorage.getItem('rewright-history');
-        if (!stored) return;
+    /* Load history on page load */
+    loadHistory();
 
-        const history = JSON.parse(stored);
-        const entry = history[index];
-        if (!entry) return;
 
-        /* ── Restore mode (Quick Fix / Deep Rewrite) ── */
-        const needsDeep = entry.mode === 'Deep Rewrite';
+    /* ═══════════════════════════════════════════════════════════════════
+    LOAD USER PREFERENCES
+    If the user has saved preferences, apply them on page load.
+    ═══════════════════════════════════════════════════════════════════ */
 
-        if (needsDeep && !toggleDeep.checked) {
+    (function () {
+        if (!window.USER_PREFS) return;
+
+        const prefs = window.USER_PREFS;
+
+        /* Apply default mode */
+        if (prefs.defaultMode === 'deep' && !toggleDeep.checked) {
             toggleDeep.checked = true;
-            toggleDeep.dispatchEvent(new Event('change'));
-        } else if (!needsDeep && toggleDeep.checked) {
-            toggleDeep.checked = false;
             toggleDeep.dispatchEvent(new Event('change'));
         }
 
-        /* ── Restore tone ── */
-        if (needsDeep && entry.tone) {
-            selectedTone = entry.tone;
+        /* Apply default tone (only relevant in deep mode) */
+        if (prefs.defaultTone && prefs.defaultTone !== 'default') {
+            selectedTone = prefs.defaultTone;
             toneButtons.forEach(function (btn) {
                 btn.classList.remove('active');
-                if (btn.getAttribute('data-tone') === entry.tone) {
+                if (btn.getAttribute('data-tone') === prefs.defaultTone) {
                     btn.classList.add('active');
                 }
             });
         }
+    })();
 
-        /* ── Restore voice sample ── */
-        if (needsDeep && entry.voice && entry.voice.length > 0) {
-            voiceSample.value = entry.voice;
-            voiceSample.dispatchEvent(new Event('input'));
-            /* Open the voice section so user can see it's loaded */
-            if (!voiceSection.classList.contains('open')) {
-                voiceSection.classList.toggle('open');
-            }
-        } else {
-            voiceSample.value = '';
-            voiceSample.dispatchEvent(new Event('input'));
-            voiceSection.classList.remove('open');
+
+    /* ═══════════════════════════════════════════════════════════════════
+    10. TOAST
+    ═══════════════════════════════════════════════════════════════════ */
+
+    function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+    USAGE COUNTER
+    ═══════════════════════════════════════════════════════════════════ */
+
+    /**
+     * Fetch current usage stats from the backend and update the display.
+     * Called on page load and after every rewrite request.
+     */
+    async function updateUsage() {
+        try {
+            const response = await fetch('/api/usage/');
+            const data = await response.json();
+            renderUsage(data);
+        } catch (error) {
+            /* Silently fail — usage display is not critical */
+            console.error('Failed to fetch usage:', error);
+        }
+    }
+
+    /**
+     * Render the usage counter with bars and numbers.
+     *
+     * @param {object} data — { minute, hourly, daily } each with { used, limit }
+     */
+    function renderUsage(data) {
+        const items = [
+            { label: 'Min', used: data.minute.used, limit: data.minute.limit },
+            { label: 'Hour', used: data.hourly.used, limit: data.hourly.limit },
+            { label: 'Day', used: data.daily.used, limit: data.daily.limit },
+        ];
+
+        let html = '';
+
+        for (const item of items) {
+            const pct = item.limit > 0 ? (item.used / item.limit) * 100 : 0;
+            const fillWidth = Math.min(pct, 100);
+
+            /* Color class based on usage percentage */
+            let colorClass = '';
+            if (pct >= 90) colorClass = 'danger';
+            else if (pct >= 70) colorClass = 'warning';
+
+            html += `
+                <div class="usage-item">
+                    <span class="usage-label">${item.label}</span>
+                    <span class="usage-value ${colorClass}">${item.used}/${item.limit}</span>
+                    <div class="usage-bar">
+                        <div class="usage-bar-fill ${colorClass}" style="width: ${fillWidth}%"></div>
+                    </div>
+                </div>
+            `;
         }
 
-        /* ── Restore input text ── */
-        inputText.value = entry.input;
-        inputText.dispatchEvent(new Event('input'));
-
-        /* ── Restore output ── */
-        outputArea.innerHTML = `<div id="output-text">${escapeHtml(entry.output)}</div>`;
-        updateOutputMeta(entry.output);
-
-        /* ── Restore buttons ── */
-        btnCopy.style.display = 'flex';
-        btnRetry.style.display = needsDeep ? 'flex' : 'none';
-        downloadWrapper.style.display = 'flex';
-
-        /* ── Restore stats ── */
-        resultStats.innerHTML = `
-            <span>${entry.inputWords}</span> → <span>${entry.outputWords}</span> words
-        `;
-        resultStats.style.display = 'block';
-
-        showToast('Loaded from history');
-    } catch (e) {
-        console.error('Failed to load history item:', e);
+        usageCounter.innerHTML = html;
     }
-}
 
-/**
- * Get a human-readable time ago string.
- */
-function getTimeAgo(timestamp) {
-    const seconds = Math.floor((Date.now() - timestamp) / 1000);
-    if (seconds < 30) return 'just now';
-    if (seconds < 60) return seconds + 's ago';
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return minutes + 'm ago';
-    const hours = Math.floor(minutes / 60);
-    return hours + 'h ago';
-}
+    /* Fetch usage on page load */
+    updateUsage();
 
-/* Toggle history open/close */
-const historyToggle = document.getElementById('history-toggle');
 
-historyToggle.addEventListener('click', function () {
-    historySection.classList.toggle('open');
-});
+    /* ═══════════════════════════════════════════════════════════════════
+    KEYBOARD SHORTCUTS
 
-/* Clear history with Yes/No confirmation */
-historyClear.addEventListener('click', function (e) {
-    e.stopPropagation();
+    Ctrl+Enter / Cmd+Enter  → Rewrite
+    Ctrl+Shift+C            → Copy result
+    Ctrl+Shift+D            → Open download menu
+    Ctrl+Shift+R            → Re-roll (Deep Rewrite only)
+    Escape                  → Close menus
+    ═══════════════════════════════════════════════════════════════════ */
 
-    /* If already showing confirmation, ignore */
-    if (document.querySelector('.history-confirm')) return;
+    document.addEventListener('keydown', function (e) {
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
-    /* Hide the clear button */
-    this.style.display = 'none';
+        /* Don't intercept other shortcuts if user is typing */
+        const isTyping = document.activeElement.tagName === 'TEXTAREA';
 
-    /* Show confirmation inline */
-    const confirm = document.createElement('div');
-    confirm.className = 'history-confirm';
-    confirm.innerHTML = `
-        <span class="confirm-text">Clear all history?</span>
-        <div class="confirm-buttons">
-            <button class="confirm-yes" id="confirm-yes">Yes</button>
-            <button class="confirm-no" id="confirm-no">No</button>
-        </div>
-    `;
+        /* ── REWRITE: Cmd+Enter (Mac) / Ctrl+Enter (Windows) ── */
+        if ((isMac ? e.metaKey : e.ctrlKey) && e.key === 'Enter') {
+            e.preventDefault();
+            if (!btnRewrite.disabled) {
+                btnRewrite.click();
+            }
+            return;
+        }
 
-    this.parentElement.appendChild(confirm);
+        /* Skip other shortcuts if typing in a textarea */
+        if (isTyping) return;
 
-    /* Yes — clear everything */
-    confirm.querySelector('.confirm-yes').addEventListener('click', function (ev) {
-        ev.stopPropagation();
-        sessionStorage.removeItem('rewright-history');
-        historyList.innerHTML = renderEmptyHistory();
-        confirm.remove();
-        historyClear.style.display = 'none';
-        showToast('History cleared');
+        /*
+        * Mac: Ctrl + key (Ctrl is free on Mac, browsers use Cmd)
+        * Windows: Ctrl + Shift + key (Ctrl alone is used by browsers)
+        */
+        const shortcutActive = isMac
+            ? (e.ctrlKey && !e.metaKey && !e.shiftKey)
+            : (e.ctrlKey && e.shiftKey && !e.metaKey);
+
+        if (!shortcutActive) return;
+
+        const key = e.key.toLowerCase();
+
+        /* Copy result */
+        if (key === 'c') {
+            if (btnCopy.style.display !== 'none') {
+                e.preventDefault();
+                btnCopy.click();
+            }
+            return;
+        }
+
+        /* Toggle download menu */
+        if (key === 'd') {
+            e.preventDefault();
+            if (downloadWrapper.style.display !== 'none') {
+                downloadMenu.classList.toggle('open');
+            }
+            return;
+        }
+
+        /* Re-roll */
+        if (key === 'r') {
+            e.preventDefault();
+            if (btnRetry.style.display !== 'none') {
+                btnRetry.click();
+            }
+            return;
+        }
+
+        /* Toggle history */
+        if (key === 'h') {
+            e.preventDefault();
+            historySection.classList.toggle('open');
+            return;
+        }
+
+        /* Toggle mode (Space) */
+        if (e.key === ' ') {
+            e.preventDefault();
+            toggleDeep.checked = !toggleDeep.checked;
+            toggleDeep.dispatchEvent(new Event('change'));
+            return;
+        }
+
+        /* Escape — always active */
+        if (e.key === 'Escape') {
+            downloadMenu.classList.remove('open');
+            if (historySection.classList.contains('open')) {
+                historySection.classList.remove('open');
+            }
+            return;
+        }
     });
 
-    /* No — cancel */
-    confirm.querySelector('.confirm-no').addEventListener('click', function (ev) {
-        ev.stopPropagation();
-        confirm.remove();
-        historyClear.style.display = 'flex';
+    /* Escape needs to work outside the shortcutActive check */
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            downloadMenu.classList.remove('open');
+            if (historySection.classList.contains('open')) {
+                historySection.classList.remove('open');
+            }
+        }
     });
-});
-
-/* Load history on page load */
-loadHistory();
-
+} /* end isHomePage guard */
 
 /* ═══════════════════════════════════════════════════════════════════
-   LOAD USER PREFERENCES
-   If the user has saved preferences, apply them on page load.
+   FLOATING FEEDBACK BUTTON
+   Opens a popup to submit feedback via AJAX.
+   Runs immediately — no DOMContentLoaded needed because the
+   feedback widget HTML is included BEFORE this script loads.
    ═══════════════════════════════════════════════════════════════════ */
 
-(function () {
-    if (!window.USER_PREFS) return;
+(function() {
+    var fab = document.getElementById('feedback-fab');
+    if (!fab) return;
 
-    const prefs = window.USER_PREFS;
+    var fabBtn      = document.getElementById('fab-btn');
+    var fabClose    = document.getElementById('fab-close');
+    var fabForm     = document.getElementById('fab-form');
+    var fabSubmit   = document.getElementById('fab-submit');
+    var fabCat      = document.getElementById('fab-category');
+    var fabMsg      = document.getElementById('fab-message');
+    var fabCount    = document.getElementById('fab-char-count');
+    var fabSuccess  = document.getElementById('fab-success');
+    var fabError    = document.getElementById('fab-error');
+    var fabErrorMsg = document.getElementById('fab-error-msg');
 
-    /* Apply default mode */
-    if (prefs.defaultMode === 'deep' && !toggleDeep.checked) {
-        toggleDeep.checked = true;
-        toggleDeep.dispatchEvent(new Event('change'));
+    if (!fabBtn) return;
+
+    fabBtn.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        fab.classList.toggle('open');
+        if (!fab.classList.contains('open')) {
+            setTimeout(resetPopup, 250);
+        }
+    };
+
+    if (fabClose) {
+        fabClose.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            fab.classList.remove('open');
+            setTimeout(resetPopup, 250);
+        };
     }
 
-    /* Apply default tone (only relevant in deep mode) */
-    if (prefs.defaultTone && prefs.defaultTone !== 'default') {
-        selectedTone = prefs.defaultTone;
-        toneButtons.forEach(function (btn) {
-            btn.classList.remove('active');
-            if (btn.getAttribute('data-tone') === prefs.defaultTone) {
-                btn.classList.add('active');
+    document.addEventListener('click', function(e) {
+        if (fab.classList.contains('open') && !fab.contains(e.target)) {
+            fab.classList.remove('open');
+            setTimeout(resetPopup, 250);
+        }
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && fab.classList.contains('open')) {
+            fab.classList.remove('open');
+            setTimeout(resetPopup, 250);
+        }
+    });
+
+    if (fabMsg && fabCount) {
+        fabMsg.oninput = function() {
+            fabCount.textContent = this.value.length.toLocaleString() + ' / 2,000';
+        };
+    }
+
+    if (fabSubmit) {
+        fabSubmit.onclick = async function() {
+            var message = fabMsg.value.trim();
+
+            if (!message) {
+                showError('Please enter a message.');
+                return;
             }
-        });
+
+            fabSubmit.disabled = true;
+            fabSubmit.textContent = 'Sending...';
+
+            try {
+                var csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
+                             || document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+                var response = await fetch('/api/feedback/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken,
+                    },
+                    body: JSON.stringify({
+                        category: fabCat.value,
+                        message: message,
+                    }),
+                });
+
+                var data = await response.json();
+
+                if (response.ok && data.success) {
+                    fabForm.style.display = 'none';
+                    fabError.style.display = 'none';
+                    fabSuccess.style.display = 'block';
+                } else {
+                    showError(data.error || 'Something went wrong.');
+                    fabSubmit.disabled = false;
+                    fabSubmit.textContent = 'Submit';
+                }
+            } catch (err) {
+                showError('Network error. Please try again.');
+                fabSubmit.disabled = false;
+                fabSubmit.textContent = 'Submit';
+            }
+        };
+    }
+
+    function showError(msg) {
+        if (fabError && fabErrorMsg) {
+            fabErrorMsg.textContent = msg;
+            fabError.style.display = 'block';
+        }
+    }
+
+    function resetPopup() {
+        if (fabForm)    fabForm.style.display = 'block';
+        if (fabSuccess) fabSuccess.style.display = 'none';
+        if (fabError)   fabError.style.display = 'none';
+        if (fabMsg)     fabMsg.value = '';
+        if (fabCat)     fabCat.selectedIndex = 0;
+        if (fabCount)   fabCount.textContent = '0 / 2,000';
+        if (fabSubmit)  { fabSubmit.disabled = false; fabSubmit.textContent = 'Submit'; }
     }
 })();
-
-
-/* ═══════════════════════════════════════════════════════════════════
-   10. TOAST
-   ═══════════════════════════════════════════════════════════════════ */
-
-function showToast(message) {
-    toast.textContent = message;
-    toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 2500);
-}
-
-/* ═══════════════════════════════════════════════════════════════════
-   USAGE COUNTER
-   ═══════════════════════════════════════════════════════════════════ */
-
-/**
- * Fetch current usage stats from the backend and update the display.
- * Called on page load and after every rewrite request.
- */
-async function updateUsage() {
-    try {
-        const response = await fetch('/api/usage/');
-        const data = await response.json();
-        renderUsage(data);
-    } catch (error) {
-        /* Silently fail — usage display is not critical */
-        console.error('Failed to fetch usage:', error);
-    }
-}
-
-/**
- * Render the usage counter with bars and numbers.
- *
- * @param {object} data — { minute, hourly, daily } each with { used, limit }
- */
-function renderUsage(data) {
-    const items = [
-        { label: 'Min', used: data.minute.used, limit: data.minute.limit },
-        { label: 'Hour', used: data.hourly.used, limit: data.hourly.limit },
-        { label: 'Day', used: data.daily.used, limit: data.daily.limit },
-    ];
-
-    let html = '';
-
-    for (const item of items) {
-        const pct = item.limit > 0 ? (item.used / item.limit) * 100 : 0;
-        const fillWidth = Math.min(pct, 100);
-
-        /* Color class based on usage percentage */
-        let colorClass = '';
-        if (pct >= 90) colorClass = 'danger';
-        else if (pct >= 70) colorClass = 'warning';
-
-        html += `
-            <div class="usage-item">
-                <span class="usage-label">${item.label}</span>
-                <span class="usage-value ${colorClass}">${item.used}/${item.limit}</span>
-                <div class="usage-bar">
-                    <div class="usage-bar-fill ${colorClass}" style="width: ${fillWidth}%"></div>
-                </div>
-            </div>
-        `;
-    }
-
-    usageCounter.innerHTML = html;
-}
-
-/* Fetch usage on page load */
-updateUsage();
-
-
-/* ═══════════════════════════════════════════════════════════════════
-   KEYBOARD SHORTCUTS
-
-   Ctrl+Enter / Cmd+Enter  → Rewrite
-   Ctrl+Shift+C            → Copy result
-   Ctrl+Shift+D            → Open download menu
-   Ctrl+Shift+R            → Re-roll (Deep Rewrite only)
-   Escape                  → Close menus
-   ═══════════════════════════════════════════════════════════════════ */
-
-document.addEventListener('keydown', function (e) {
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-
-    /* Don't intercept other shortcuts if user is typing */
-    const isTyping = document.activeElement.tagName === 'TEXTAREA';
-
-    /* ── REWRITE: Cmd+Enter (Mac) / Ctrl+Enter (Windows) ── */
-    if ((isMac ? e.metaKey : e.ctrlKey) && e.key === 'Enter') {
-        e.preventDefault();
-        if (!btnRewrite.disabled) {
-            btnRewrite.click();
-        }
-        return;
-    }
-
-    /* Skip other shortcuts if typing in a textarea */
-    if (isTyping) return;
-
-    /*
-     * Mac: Ctrl + key (Ctrl is free on Mac, browsers use Cmd)
-     * Windows: Ctrl + Shift + key (Ctrl alone is used by browsers)
-     */
-    const shortcutActive = isMac
-        ? (e.ctrlKey && !e.metaKey && !e.shiftKey)
-        : (e.ctrlKey && e.shiftKey && !e.metaKey);
-
-    if (!shortcutActive) return;
-
-    const key = e.key.toLowerCase();
-
-    /* Copy result */
-    if (key === 'c') {
-        if (btnCopy.style.display !== 'none') {
-            e.preventDefault();
-            btnCopy.click();
-        }
-        return;
-    }
-
-    /* Toggle download menu */
-    if (key === 'd') {
-        e.preventDefault();
-        if (downloadWrapper.style.display !== 'none') {
-            downloadMenu.classList.toggle('open');
-        }
-        return;
-    }
-
-    /* Re-roll */
-    if (key === 'r') {
-        e.preventDefault();
-        if (btnRetry.style.display !== 'none') {
-            btnRetry.click();
-        }
-        return;
-    }
-
-    /* Toggle history */
-    if (key === 'h') {
-        e.preventDefault();
-        historySection.classList.toggle('open');
-        return;
-    }
-
-    /* Toggle mode (Space) */
-    if (e.key === ' ') {
-        e.preventDefault();
-        toggleDeep.checked = !toggleDeep.checked;
-        toggleDeep.dispatchEvent(new Event('change'));
-        return;
-    }
-
-    /* Escape — always active */
-    if (e.key === 'Escape') {
-        downloadMenu.classList.remove('open');
-        if (historySection.classList.contains('open')) {
-            historySection.classList.remove('open');
-        }
-        return;
-    }
-});
-
-/* Escape needs to work outside the shortcutActive check */
-document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') {
-        downloadMenu.classList.remove('open');
-        if (historySection.classList.contains('open')) {
-            historySection.classList.remove('open');
-        }
-    }
-});

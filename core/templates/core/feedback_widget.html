@@ -4,7 +4,7 @@
     Floating feedback button that appears on every page.
     
     Include this at the bottom of every template with:
-        {% include 'core/feedback_widget.html' %}
+        include 'core/feedback_widget.html'
     
     How it works:
     1. A small round button sits in the bottom-right corner
@@ -47,8 +47,14 @@
                 </div>
                 <div class="fab-group">
                     <label for="fab-message">Message</label>
-                    <textarea id="fab-message" rows="4" 
-                              placeholder="What's on your mind?"
+                    <textarea id="fab-message" rows="6" 
+                              placeholder="Tell us what you think — we read every message.
+
+Bug? Describe what happened, what you expected, and steps to reproduce it.
+Feature idea? Explain the problem it would solve and how you'd use it.
+General? Share any thoughts about your experience using Rewright.
+
+The more detail you give, the better we can improve."
                               maxlength="2000"></textarea>
                     <span class="fab-char-count" id="fab-char-count">0 / 2,000</span>
                 </div>

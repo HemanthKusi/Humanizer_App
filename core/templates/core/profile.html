@@ -49,6 +49,7 @@
                 <button type="submit" class="nav-link nav-logout">Log out</button>
             </form>
         </nav>
+
     </header>
 
     <!-- ─── PROFILE CONTENT ─────────────────────────── -->
@@ -184,6 +185,7 @@
         </div>
     </main>
 
+    {% include 'core/feedback_widget.html' %}
     <script src="{% static 'core/main.js' %}"></script>
 
     <!-- Profile page inline script for delete confirmation -->
@@ -227,6 +229,5 @@
             });
         })();
     </script>
-
 </body>
 </html>
