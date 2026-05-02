@@ -3966,3 +3966,164 @@ body.premium .fab-guest p {
         right: 1rem;
     }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   GUEST LIMIT MODAL
+   Shown after 3 free rewrites for unauthenticated users.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.guest-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    animation: guestFadeIn 0.3s ease forwards;
+}
+
+@keyframes guestFadeIn {
+    to { opacity: 1; }
+}
+
+.guest-modal {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2.5rem 2rem;
+    max-width: 420px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    transform: translateY(20px);
+    animation: guestSlideUp 0.3s ease forwards;
+}
+
+@keyframes guestSlideUp {
+    to { transform: translateY(0); }
+}
+
+.guest-modal-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    opacity: 0.8;
+}
+
+.guest-modal-title {
+    font-family: var(--font-heading);
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+}
+
+.guest-modal-text {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 1.75rem;
+}
+
+.guest-modal-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+}
+
+.guest-modal-btn {
+    display: block;
+    padding: 0.7rem 1.5rem;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.guest-modal-signup {
+    background: var(--accent);
+    color: #fff;
+}
+
+.guest-modal-signup:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.guest-modal-login {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+}
+
+.guest-modal-login:hover {
+    background: var(--bg-secondary);
+}
+
+.guest-modal-dismiss {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 0.4rem;
+    transition: color 0.2s;
+}
+
+.guest-modal-dismiss:hover {
+    color: var(--text-secondary);
+}
+
+/* ── Dark mode ── */
+body.premium .guest-modal {
+    background: rgba(15, 15, 25, 0.95);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+body.premium .guest-modal-title {
+    color: #e2e8f0;
+}
+
+body.premium .guest-modal-text {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+body.premium .guest-modal-login {
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #e2e8f0;
+}
+
+body.premium .guest-modal-login:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+body.premium .guest-modal-dismiss {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+body.premium .guest-modal-dismiss:hover {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* ── Remaining count badge on rewrite button ── */
+.guest-remaining {
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-top: 1rem;
+    text-align: center;
+}
+
+body.premium .guest-remaining {
+    color: rgba(255, 255, 255, 0.4);
+}

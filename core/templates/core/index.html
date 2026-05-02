@@ -254,6 +254,24 @@ Min 100 words · Max 500 words"></textarea>
     </main>
 
     <div class="toast" id="toast"></div>
+
+    <!-- Guest limit modal — shown after 3 free rewrites -->
+    <div class="guest-modal-overlay" id="guest-modal" style="display:none;">
+        <div class="guest-modal">
+            <div class="guest-modal-icon">✦</div>
+            <h2 class="guest-modal-title">You've used your free rewrites</h2>
+            <p class="guest-modal-text">
+                Create a free account to keep rewriting.
+                It takes 10 seconds and you get more usage.
+            </p>
+            <div class="guest-modal-buttons">
+                <a href="{% url 'signup' %}" class="guest-modal-btn guest-modal-signup">Create free account</a>
+                <a href="{% url 'login' %}" class="guest-modal-btn guest-modal-login">I have an account</a>
+            </div>
+            <button class="guest-modal-dismiss" id="guest-modal-dismiss">Maybe later</button>
+        </div>
+    </div>
+
     <!-- Load user preferences -->
     {% if user_prefs %}
     <script>

@@ -432,6 +432,109 @@ const MAX_HISTORY = 5;
 if (inputText && toggleDeep && btnRewrite) {
     document.querySelector('.btn-text').textContent = 'Quick Fix';
 
+        /* ═══════════════════════════════════════════════════════════════════
+    GUEST USAGE LIMIT — 3 free rewrites
+    Tracks usage in localStorage. Shows modal after limit reached.
+    Only applies to guest users (not logged in).
+    ═══════════════════════════════════════════════════════════════════ */
+
+    const GUEST_LIMIT = 3;
+    const isGuest = !document.querySelector('.nav-logout');
+    const guestModal = document.getElementById('guest-modal');
+    const guestDismiss = document.getElementById('guest-modal-dismiss');
+
+    /**
+     * Get the number of rewrites this guest has used.
+     * Returns 0 if not a guest or no history.
+     */
+    function getGuestUsage() {
+        if (!isGuest) return 0;
+        try {
+            return parseInt(localStorage.getItem('rewright-guest-usage') || '0', 10);
+        } catch (e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Increment guest usage count by 1.
+     */
+    function incrementGuestUsage() {
+        if (!isGuest) return;
+        try {
+            const current = getGuestUsage();
+            localStorage.setItem('rewright-guest-usage', String(current + 1));
+        } catch (e) { }
+        updateGuestRemaining();
+    }
+
+    /**
+     * Check if guest has reached the limit.
+     * Returns true if they should be blocked.
+     */
+    function isGuestBlocked() {
+        if (!isGuest) return false;
+        return getGuestUsage() >= GUEST_LIMIT;
+    }
+
+    /**
+     * Show the guest limit modal.
+     */
+    function showGuestModal() {
+        if (guestModal) {
+            guestModal.style.display = 'flex';
+        }
+    }
+
+    /**
+     * Update the remaining count display below the rewrite button.
+     */
+    function updateGuestRemaining() {
+        if (!isGuest) return;
+
+        let badge = document.getElementById('guest-remaining');
+        const used = getGuestUsage();
+        const remaining = Math.max(0, GUEST_LIMIT - used);
+
+        if (!badge) {
+            badge = document.createElement('div');
+            badge.className = 'guest-remaining';
+            badge.id = 'guest-remaining';
+            const actionBar = document.querySelector('.action-bar');
+            if (actionBar) {
+                actionBar.parentElement.insertBefore(badge, actionBar.nextSibling);
+            }
+        }
+
+        if (remaining === 0) {
+        badge.textContent = 'No free rewrites remaining — create an account to continue';
+        badge.style.color = '#dc2626';
+        badge.style.fontWeight = '600';
+        } else {
+            badge.textContent = `${remaining} free rewrite${remaining === 1 ? '' : 's'} remaining`;
+        }
+    }
+
+    /* Dismiss button — hides modal but doesn't reset the limit */
+    if (guestDismiss) {
+        guestDismiss.addEventListener('click', function () {
+            guestModal.style.display = 'none';
+        });
+    }
+
+    /* Close modal on overlay click */
+    if (guestModal) {
+        guestModal.addEventListener('click', function (e) {
+            if (e.target === guestModal) {
+                guestModal.style.display = 'none';
+            }
+        });
+    }
+
+    /* Show remaining count on page load for guests */
+    if (isGuest) {
+        updateGuestRemaining();
+    }
 
     /* ═══════════════════════════════════════════════════════════════════
     3. CHARACTER COUNTERS — both panels
@@ -670,11 +773,17 @@ if (inputText && toggleDeep && btnRewrite) {
     ═══════════════════════════════════════════════════════════════════ */
 
     btnRewrite.addEventListener('click', async function () {
-        const text = inputText.value.trim();
-        if (!text) return;
+    const text = inputText.value.trim();
+    if (!text) return;
 
-        /* Prevent rapid clicking */
-        const now = Date.now();
+    /* Check guest limit BEFORE making the API call */
+    if (isGuestBlocked()) {
+        showGuestModal();
+        return;
+    }
+
+    /* Prevent rapid clicking */
+    const now = Date.now();
         if (now - lastRequestTime < REQUEST_COOLDOWN) {
             showToast('Please wait a moment before trying again.');
             return;
@@ -855,8 +964,13 @@ if (inputText && toggleDeep && btnRewrite) {
         btnRetry.style.display = toggleDeep.checked ? 'flex' : 'none';
         downloadWrapper.style.display = 'flex';
 
-        /* Refresh usage counter */
-        updateUsage();
+        /* Refresh usage counter — only for logged-in users */
+        if (!isGuest) {
+            updateUsage();
+        }
+
+        /* Track guest usage */
+        incrementGuestUsage();
 
         /* Save to session history */
         saveToHistory(
@@ -917,8 +1031,10 @@ if (inputText && toggleDeep && btnRewrite) {
                 showInlineHighlights(voiceSample, flaggedWords);
             }
         }
-        /* Refresh usage counter */
-        updateUsage();
+        /* Refresh usage counter — only for logged-in users */
+        if (!isGuest) {
+            updateUsage();
+        }
     }
 
     /**
@@ -1499,8 +1615,10 @@ if (inputText && toggleDeep && btnRewrite) {
         usageCounter.innerHTML = html;
     }
 
-    /* Fetch usage on page load */
-    updateUsage();
+    /* Fetch usage on page load — only for logged-in users */
+    if (!isGuest) {
+        updateUsage();
+    }
 
 
     /* ═══════════════════════════════════════════════════════════════════

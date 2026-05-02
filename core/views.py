@@ -187,6 +187,17 @@ def humanize(request: HttpRequest) -> JsonResponse:
                 {'error': 'Text is too long. Please keep it under 5,000 characters.'},
                 status=400
             )
+        
+        # ── Guest usage limit (backend safety net) ──
+        # Frontend tracks usage with localStorage but that can be bypassed.
+        # Backend checks session-based counter as a backup.
+        if not request.user.is_authenticated:
+            guest_usage = request.session.get('guest_rewrites', 0)
+            if guest_usage >= 3:
+                return JsonResponse({
+                    'error': 'You have used your 3 free rewrites. Please create an account to continue.',
+                    'guest_limit_reached': True,
+                }, status=403)
 
         # ── Detect input language ──
         language = detect_language(text)
@@ -221,6 +232,11 @@ def humanize(request: HttpRequest) -> JsonResponse:
 
             duration = round(time.time() - request_start, 2)
             track_usage(request)
+
+            # Increment guest session counter
+            if not request.user.is_authenticated:
+                request.session['guest_rewrites'] = request.session.get('guest_rewrites', 0) + 1
+
             # Calculate readability before and after
             original_readability = flesch_reading_ease(text)
             final_readability = flesch_reading_ease(rule_result['text'])
@@ -300,6 +316,11 @@ def humanize(request: HttpRequest) -> JsonResponse:
         duration = round(time.time() - request_start, 2)
         has_voice = 'yes' if voice_sample else 'no'
         track_usage(request)
+
+        # Increment guest session counter
+        if not request.user.is_authenticated:
+            request.session['guest_rewrites'] = request.session.get('guest_rewrites', 0) + 1
+
         # Calculate readability before and after
         original_readability = flesch_reading_ease(text)
         final_readability = flesch_reading_ease(llm_result['text'])
