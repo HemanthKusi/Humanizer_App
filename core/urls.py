@@ -68,4 +68,7 @@ urlpatterns = [
     # API endpoint — generates a downloadable file from the rewritten text
     # This is called when the user clicks "Download" after rewriting.
     path('api/download/', views.download, name='download'),
+    # API endpoint — submits user feedback
+    # This is called when the user clicks the feedback button.
+    path('api/feedback/', views.feedback_api, name='feedback_api'),
 ]

@@ -1,0 +1,79 @@
+<!--
+    feedback_widget.html
+    --------------------
+    Floating feedback button that appears on every page.
+    
+    Include this at the bottom of every template with:
+        {% include 'core/feedback_widget.html' %}
+    
+    How it works:
+    1. A small round button sits in the bottom-right corner
+    2. Click it → a popup opens with category dropdown + message textarea
+    3. Submit → sends AJAX POST to /api/feedback/
+    4. Success → shows thank you message inside the popup
+    5. Close → popup hides, button returns to normal
+    
+    Only logged-in users can submit feedback.
+    Guest users see a "Log in to send feedback" message instead.
+-->
+
+<div class="feedback-fab" id="feedback-fab">
+    <!-- The floating button -->
+    <button class="fab-btn" id="fab-btn" title="Send feedback">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+    </button>
+
+    <!-- The popup -->
+    <div class="fab-popup" id="fab-popup">
+        <div class="fab-popup-header">
+            <span class="fab-popup-title">Send feedback</span>
+            <button class="fab-popup-close" id="fab-close">&times;</button>
+        </div>
+
+        {% if user.is_authenticated %}
+        <div class="fab-popup-body" id="fab-body">
+            <div class="fab-form" id="fab-form">
+                <div class="fab-group">
+                    <label for="fab-category">Category</label>
+                    <select id="fab-category">
+                        <option value="general">General</option>
+                        <option value="bug">Bug report</option>
+                        <option value="feature">Feature request</option>
+                    </select>
+                </div>
+                <div class="fab-group">
+                    <label for="fab-message">Message</label>
+                    <textarea id="fab-message" rows="4" 
+                              placeholder="What's on your mind?"
+                              maxlength="2000"></textarea>
+                    <span class="fab-char-count" id="fab-char-count">0 / 2,000</span>
+                </div>
+                <button class="fab-submit" id="fab-submit">Submit</button>
+            </div>
+
+            <!-- Success state (hidden by default) -->
+            <div class="fab-success" id="fab-success" style="display:none;">
+                <div class="fab-success-icon">✓</div>
+                <p>Thanks for your feedback!</p>
+                <span class="fab-success-sub">We'll review it shortly.</span>
+            </div>
+
+            <!-- Error state (hidden by default) -->
+            <div class="fab-error" id="fab-error" style="display:none;">
+                <p id="fab-error-msg"></p>
+            </div>
+        </div>
+        {% else %}
+        <div class="fab-popup-body">
+            <div class="fab-guest">
+                <p>Log in to send feedback</p>
+                <a href="{% url 'login' %}" class="fab-login-link">Log in</a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>

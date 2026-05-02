@@ -1401,3 +1401,83 @@ def admin_analytics_view(request: HttpRequest) -> HttpResponse:
         'stats': stats,
         'unread_feedback': unread_feedback,
     })
+
+@require_POST
+def feedback_api(request: HttpRequest) -> JsonResponse:
+    """
+    API endpoint for submitting feedback via the floating button.
+
+    Accepts POST with JSON:
+        { "category": "bug|feature|general", "message": "..." }
+
+    Only authenticated users can submit.
+    Returns JSON success/error response.
+
+    Args:
+        request: The incoming HTTP POST request
+
+    Returns:
+        JsonResponse with success or error message
+    """
+    # Only logged-in users can submit feedback
+    if not request.user.is_authenticated:
+        return JsonResponse(
+            {'error': 'Please log in to submit feedback.'},
+            status=401
+        )
+
+    try:
+        body = json.loads(request.body.decode('utf-8'))
+        category = body.get('category', '').strip()
+        message = body.get('message', '').strip()
+
+        # Validate category
+        valid_categories = ['bug', 'feature', 'general']
+        if category not in valid_categories:
+            return JsonResponse(
+                {'error': 'Invalid category. Choose bug, feature, or general.'},
+                status=400
+            )
+
+        # Validate message
+        if not message:
+            return JsonResponse(
+                {'error': 'Please enter a message.'},
+                status=400
+            )
+
+        if len(message) > 2000:
+            return JsonResponse(
+                {'error': 'Message is too long. Please keep it under 2,000 characters.'},
+                status=400
+            )
+
+        # Create the feedback record
+        Feedback.objects.create(
+            user=request.user,
+            category=category,
+            message=message,
+        )
+
+        api_logger.info(
+            f'FEEDBACK SUBMITTED | user={request.user.username} (id={request.user.id}) | '
+            f'category={category} | '
+            f'ip={request.META.get("REMOTE_ADDR")}'
+        )
+
+        return JsonResponse({'success': True})
+
+    except json.JSONDecodeError:
+        return JsonResponse(
+            {'error': 'Invalid request.'},
+            status=400
+        )
+    except Exception as e:
+        api_logger.error(
+            f'FEEDBACK ERROR | user={request.user.username} (id={request.user.id}) | '
+            f'error={str(e)}'
+        )
+        return JsonResponse(
+            {'error': 'Something went wrong. Please try again.'},
+            status=500
+        )
