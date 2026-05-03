@@ -56,6 +56,9 @@ urlpatterns = [
     # Admin analytics page
     # This is a custom admin page we create at /manage/analytics/ for staff users to view overall usage analytics.
     path('manage/analytics/', views.admin_analytics_view, name='admin_analytics'),
+    # Email verification page
+    # Users can enter their email OTP code here
+    path('verify/', views.verify_email_view, name='verify_email'),
 
     # ── API endpoints ──
 

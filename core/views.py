@@ -36,7 +36,9 @@ from .readability import flesch_reading_ease
 
 from .language import detect_language
 
-from .models import UserPreferences, Feedback, RewriteLog
+from .models import UserPreferences, Feedback, RewriteLog, EmailVerification
+ 
+from .email_utils import send_verification_email
 
 def track_usage(request):
     """
@@ -524,7 +526,7 @@ from django.contrib.auth import authenticate, login, logout, update_session_auth
 from django.contrib.auth.models import User
 from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
-from .forms import SignUpForm, LoginForm, EditProfileForm, ChangePasswordForm, PreferencesForm, FeedbackForm
+from .forms import SignUpForm, LoginForm, EditProfileForm, ChangePasswordForm, PreferencesForm, FeedbackForm, OTPForm
 
 
 def signup_view(request: HttpRequest) -> HttpResponse:
@@ -566,7 +568,6 @@ def signup_view(request: HttpRequest) -> HttpResponse:
             )
 
             # Log the user in immediately after signup
-            # No need to make them go to a separate login page
             login(request, user)
 
             api_logger.info(
@@ -574,13 +575,103 @@ def signup_view(request: HttpRequest) -> HttpResponse:
                 f'ip={request.META.get("REMOTE_ADDR")}'
             )
 
-            return redirect('index')
+            # Create and send verification code
+            verification = EmailVerification.create_for_user(user)
+            send_verification_email(user, verification.code)
+
+            return redirect('verify_email')
     else:
         # GET request — show empty form
         form = SignUpForm()
 
     return render(request, 'core/signup.html', {'form': form})
 
+@login_required
+def verify_email_view(request: HttpRequest) -> HttpResponse:
+    """
+    Email verification page — user enters the 6-digit OTP code.
+
+    GET:  Show the OTP input form
+    POST: Validate the code
+
+    Handles:
+    - Correct code → mark as verified, redirect to homepage
+    - Wrong code → show error
+    - Expired code → show error with resend option
+    - Resend → generate new code and email it
+
+    Args:
+        request: The incoming HTTP request
+
+    Returns:
+        Rendered verify_email.html or redirect to homepage
+    """
+    user = request.user
+
+    # Check if already verified
+    try:
+        verification = EmailVerification.objects.get(user=user)
+        if verification.is_verified:
+            return redirect('index')
+    except EmailVerification.DoesNotExist:
+        # No verification record — create one
+        verification = EmailVerification.create_for_user(user)
+        send_verification_email(user, verification.code)
+
+    form = OTPForm()
+    error_message = None
+    success_message = None
+
+    if request.method == 'POST':
+        action = request.POST.get('action', 'verify')
+
+        # ── Handle resend ──
+        if action == 'resend':
+            verification = EmailVerification.create_for_user(user)
+            sent = send_verification_email(user, verification.code)
+            if sent:
+                success_message = 'A new code has been sent to your email.'
+            else:
+                error_message = 'Could not send email. Please try again in a moment.'
+            return render(request, 'core/verify_email.html', {
+                'form': form,
+                'email': user.email,
+                'error_message': error_message,
+                'success_message': success_message,
+            })
+
+        # ── Handle verify ──
+        form = OTPForm(request.POST)
+
+        if form.is_valid():
+            entered_code = form.cleaned_data['code']
+
+            # Refresh from database
+            verification = EmailVerification.objects.get(user=user)
+
+            if verification.is_expired():
+                error_message = 'This code has expired. Please request a new one.'
+            elif verification.code != entered_code:
+                error_message = 'Incorrect code. Please check your email and try again.'
+            else:
+                # Code is correct and not expired
+                verification.is_verified = True
+                verification.save()
+
+                api_logger.info(
+                    f'EMAIL VERIFIED | user={user.username} (id={user.id}) | '
+                    f'email={user.email} | '
+                    f'ip={request.META.get("REMOTE_ADDR")}'
+                )
+
+                return redirect('index')
+
+    return render(request, 'core/verify_email.html', {
+        'form': form,
+        'email': user.email,
+        'error_message': error_message,
+        'success_message': success_message,
+    })
 
 def login_view(request: HttpRequest) -> HttpResponse:
     """
