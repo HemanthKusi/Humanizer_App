@@ -335,3 +335,35 @@ class FeedbackForm(forms.Form):
             'rows': 5,
         }),
     )
+
+class OTPForm(forms.Form):
+    """
+    Simple form for entering the 6-digit verification code.
+
+    Validates that:
+    - Code is exactly 6 characters
+    - Code contains only digits
+    """
+    code = forms.CharField(
+        max_length=6,
+        min_length=6,
+        widget=forms.TextInput(attrs={
+            'placeholder': '000000',
+            'class': 'otp-input',
+            'autocomplete': 'one-time-code',
+            'inputmode': 'numeric',
+            'pattern': '[0-9]*',
+            'maxlength': '6',
+        }),
+        error_messages={
+            'required': 'Please enter the verification code.',
+            'min_length': 'Code must be exactly 6 digits.',
+            'max_length': 'Code must be exactly 6 digits.',
+        }
+    )
+
+    def clean_code(self):
+        code = self.cleaned_data['code'].strip()
+        if not code.isdigit():
+            raise forms.ValidationError('Code must contain only numbers.')
+        return code
