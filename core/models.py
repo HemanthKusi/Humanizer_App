@@ -227,3 +227,76 @@ class RewriteLog(models.Model):
     def __str__(self):
         username = self.user.username if self.user else 'Anonymous'
         return f'{self.mode} by {username} ({self.created_at.strftime("%Y-%m-%d %H:%M")})'
+    
+import random
+import string
+from django.utils import timezone
+from datetime import timedelta
+
+
+class EmailVerification(models.Model):
+    """
+    Stores OTP codes for email verification.
+
+    How it works:
+    1. User signs up → we create a record with a 6-digit code
+    2. We email the code to the user
+    3. User enters the code on the verify page
+    4. If code matches and hasn't expired → mark as verified
+    5. Codes expire after 10 minutes
+
+    Fields:
+        user        — the user this code belongs to
+        code        — the 6-digit OTP code
+        created_at  — when the code was generated
+        expires_at  — when the code expires (10 min after creation)
+        is_verified — whether the user has successfully verified
+    """
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='email_verification'
+    )
+    code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_verified = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f'{self.user.username} — {"verified" if self.is_verified else "pending"}'
+
+    def is_expired(self):
+        """Check if the OTP code has expired."""
+        return timezone.now() > self.expires_at
+
+    @staticmethod
+    def generate_code():
+        """Generate a random 6-digit numeric code."""
+        return ''.join(random.choices(string.digits, k=6))
+
+    @classmethod
+    def create_for_user(cls, user):
+        """
+        Create or refresh a verification code for a user.
+
+        If a record already exists, update it with a new code.
+        If not, create a new record.
+
+        Args:
+            user: The User object to create verification for
+
+        Returns:
+            The EmailVerification object with the new code
+        """
+        code = cls.generate_code()
+        expires = timezone.now() + timedelta(minutes=10)
+
+        verification, created = cls.objects.update_or_create(
+            user=user,
+            defaults={
+                'code': code,
+                'expires_at': expires,
+                'is_verified': False,
+            }
+        )
+        return verification

@@ -364,3 +364,26 @@ SOCIALACCOUNT_PROVIDERS = {
         },
     },
 }
+
+# ─── EMAIL ───────────────────────────────────────────────────────────
+#
+# Uses Gmail SMTP to send verification codes and password reset emails.
+# Free for up to 500 emails/day.
+#
+# Requires a Gmail App Password (not your regular password).
+# The app password is stored in .env for security.
+#
+# In development with DEBUG=True, if no email credentials are set,
+# emails print to the console instead of actually sending.
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+# Fallback: if no email credentials, print emails to console (dev only)
+if not EMAIL_HOST_USER or not EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
