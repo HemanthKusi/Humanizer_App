@@ -4127,3 +4127,139 @@ body.premium .guest-modal-dismiss:hover {
 body.premium .guest-remaining {
     color: rgba(255, 255, 255, 0.4);
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   EMAIL VERIFICATION PAGE
+   ═══════════════════════════════════════════════════════════════════ */
+
+.verify-card {
+    max-width: 420px;
+    text-align: center;
+}
+
+.verify-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.verify-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+}
+
+.verify-subtitle strong {
+    color: var(--text-primary);
+}
+
+.verify-form {
+    margin-bottom: 1.5rem;
+}
+
+.otp-wrapper {
+    margin-bottom: 1.25rem;
+}
+
+.otp-input {
+    width: 100%;
+    padding: 0.9rem;
+    text-align: center;
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: 0.8rem;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    transition: border-color 0.2s;
+}
+
+.otp-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.otp-input::placeholder {
+    color: var(--text-muted);
+    letter-spacing: 0.8rem;
+    font-weight: 400;
+}
+
+.verify-footer {
+    margin-top: 1rem;
+}
+
+.verify-hint {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.verify-resend-form {
+    display: inline;
+}
+
+.verify-resend-btn {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--font-body);
+    padding: 0;
+    transition: opacity 0.2s;
+}
+
+.verify-resend-btn:hover {
+    opacity: 0.7;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   UNVERIFIED EMAIL BANNER
+   Shown at the top of every page for unverified users.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.unverified-banner {
+    background: #fef3c7;
+    border-bottom: 1px solid #fde68a;
+    padding: 0.6rem 1.5rem;
+    text-align: center;
+    font-size: 0.82rem;
+    color: #92400e;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1500;
+}
+
+.unverified-banner a {
+    color: #92400e;
+    font-weight: 600;
+    text-decoration: underline;
+    margin-left: 0.3rem;
+}
+
+.unverified-banner a:hover {
+    color: #78350f;
+}
+
+/* Push the header down when banner is showing */
+body.has-unverified-banner header {
+    margin-top: 2.2rem;
+}
+
+/* Dark mode */
+body.premium .unverified-banner {
+    background: rgba(251, 191, 36, 0.1);
+    border-color: rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+}
+
+body.premium .unverified-banner a {
+    color: #fbbf24;
+}

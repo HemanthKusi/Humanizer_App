@@ -86,6 +86,16 @@ def index(request: HttpRequest) -> HttpResponse:
         except UserPreferences.DoesNotExist:
             context['user_prefs'] = None
 
+    # Redirect unverified users to the verification page
+    if request.user.is_authenticated:
+        try:
+            verification = EmailVerification.objects.get(user=request.user)
+            if not verification.is_verified:
+                return redirect('verify_email')
+        except EmailVerification.DoesNotExist:
+            # User created before email verification was added — let them through
+            pass
+
     return render(request, 'core/index.html', context)
 
 
@@ -190,6 +200,17 @@ def humanize(request: HttpRequest) -> JsonResponse:
                 status=400
             )
         
+        # ── Block unverified users ──
+        if request.user.is_authenticated:
+            try:
+                verification = EmailVerification.objects.get(user=request.user)
+                if not verification.is_verified:
+                    return JsonResponse({
+                        'error': 'Please verify your email before using Rewright.',
+                    }, status=403)
+            except EmailVerification.DoesNotExist:
+                pass
+
         # ── Guest usage limit (backend safety net) ──
         # Frontend tracks usage with localStorage but that can be bypassed.
         # Backend checks session-based counter as a backup.
@@ -568,7 +589,7 @@ def signup_view(request: HttpRequest) -> HttpResponse:
             )
 
             # Log the user in immediately after signup
-            login(request, user)
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
 
             api_logger.info(
                 f'SIGNUP | user={user.username} (id={user.id}) | email={user.email} | '

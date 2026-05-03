@@ -6,6 +6,12 @@ Every Django project has exactly one settings.py.
 It controls the database, installed apps, templates, security, and more.
 """
 
+# SSL certificate configuration
+import ssl
+import certifi
+import os
+os.environ['SSL_CERT_FILE'] = certifi.where()
+
 from pathlib import Path
 import os
 from dotenv import load_dotenv
