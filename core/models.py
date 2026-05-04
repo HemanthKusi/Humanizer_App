@@ -363,3 +363,51 @@ class EmailChangeRequest(models.Model):
         self.expires_at = timezone.now() + timedelta(minutes=10)
         self.save()
         return self
+    
+class PasswordReset(models.Model):
+    """
+    Stores OTP codes for password reset.
+
+    Flow:
+    1. User enters email on forgot password page
+    2. We create a record with a 6-digit code
+    3. We email the code
+    4. User enters the code
+    5. If correct and not expired → they set a new password
+
+    Fields:
+        email       — the email address (not a FK to User — we don't
+                      reveal whether the account exists)
+        code        — 6-digit OTP
+        created_at  — when generated
+        expires_at  — when code expires (10 min)
+        is_used     — whether the code has been used successfully
+    """
+    email = models.EmailField()
+    code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_used = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f'{self.email} — {"used" if self.is_used else "pending"}'
+
+    def is_expired(self):
+        return timezone.now() > self.expires_at
+
+    @classmethod
+    def create_for_email(cls, email):
+        """
+        Create a new password reset code for an email.
+        Deletes any previous unused codes for this email.
+        """
+        cls.objects.filter(email=email, is_used=False).delete()
+
+        code = EmailVerification.generate_code()
+        expires = timezone.now() + timedelta(minutes=10)
+
+        return cls.objects.create(
+            email=email,
+            code=code,
+            expires_at=expires,
+        )

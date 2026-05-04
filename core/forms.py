@@ -402,3 +402,65 @@ class ChangeEmailForm(forms.Form):
             raise forms.ValidationError('This email is already in use by another account.')
 
         return email
+    
+class ForgotPasswordForm(forms.Form):
+    """
+    Step 1 of password reset — enter your email.
+    """
+    email = forms.EmailField(
+        widget=forms.EmailInput(attrs={
+            'placeholder': 'Enter your email address',
+            'class': 'form-input',
+        }),
+        error_messages={
+            'required': 'Please enter your email address.',
+            'invalid': 'Please enter a valid email address.',
+        }
+    )
+
+
+class ResetPasswordForm(forms.Form):
+    """
+    Step 3 of password reset — enter new password.
+
+    Validates:
+    - Password meets Django's password validators
+    - Password and confirmation match
+    """
+    new_password = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'placeholder': 'New password',
+            'class': 'form-input',
+        }),
+        error_messages={
+            'required': 'Please enter a new password.',
+        }
+    )
+
+    confirm_password = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'placeholder': 'Confirm new password',
+            'class': 'form-input',
+        }),
+        error_messages={
+            'required': 'Please confirm your new password.',
+        }
+    )
+
+    def clean(self):
+        cleaned = super().clean()
+        pw = cleaned.get('new_password')
+        cpw = cleaned.get('confirm_password')
+
+        if pw and cpw and pw != cpw:
+            self.add_error('confirm_password', 'Passwords do not match.')
+
+        # Run Django's built-in password validators
+        if pw:
+            from django.contrib.auth.password_validation import validate_password
+            try:
+                validate_password(pw)
+            except forms.ValidationError as e:
+                self.add_error('new_password', e)
+
+        return cleaned
