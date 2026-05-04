@@ -367,3 +367,38 @@ class OTPForm(forms.Form):
         if not code.isdigit():
             raise forms.ValidationError('Code must contain only numbers.')
         return code
+    
+class ChangeEmailForm(forms.Form):
+    """
+    Form for requesting an email change.
+
+    Validates:
+    - New email is valid format
+    - New email is not already in use
+    - New email is different from current
+    """
+    new_email = forms.EmailField(
+        widget=forms.EmailInput(attrs={
+            'placeholder': 'New email address',
+            'class': 'form-input',
+        }),
+        error_messages={
+            'required': 'Please enter your new email address.',
+            'invalid': 'Please enter a valid email address.',
+        }
+    )
+
+    def __init__(self, *args, current_email=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.current_email = current_email
+
+    def clean_new_email(self):
+        email = self.cleaned_data['new_email'].lower().strip()
+
+        if email == self.current_email:
+            raise forms.ValidationError('This is already your current email.')
+
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError('This email is already in use by another account.')
+
+        return email

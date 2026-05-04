@@ -300,3 +300,66 @@ class EmailVerification(models.Model):
             }
         )
         return verification
+    
+class EmailChangeRequest(models.Model):
+    """
+    Stores pending email change requests with two-step OTP verification.
+
+    Flow:
+    Step 1: Send OTP to current email → user proves they own it
+    Step 2: Send OTP to new email → user proves they own it
+    Then update user.email
+
+    Fields:
+        user            — the user requesting the change
+        new_email       — the new email address they want
+        code            — current 6-digit OTP code
+        step            — which verification step we're on (1 or 2)
+        created_at      — when the request was made
+        expires_at      — when the current code expires
+    """
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='email_change_requests'
+    )
+    new_email = models.EmailField()
+    code = models.CharField(max_length=6)
+    step = models.IntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    def __str__(self):
+        return f'{self.user.username} → {self.new_email} (step {self.step})'
+
+    def is_expired(self):
+        return timezone.now() > self.expires_at
+
+    @classmethod
+    def create_for_user(cls, user, new_email):
+        """
+        Create a new email change request at step 1.
+        Deletes any previous pending requests for this user.
+        """
+        cls.objects.filter(user=user).delete()
+
+        code = EmailVerification.generate_code()
+        expires = timezone.now() + timedelta(minutes=10)
+
+        return cls.objects.create(
+            user=user,
+            new_email=new_email,
+            code=code,
+            step=1,
+            expires_at=expires,
+        )
+
+    def advance_to_step2(self):
+        """
+        Generate a new code for step 2 (verify new email).
+        """
+        self.code = EmailVerification.generate_code()
+        self.step = 2
+        self.expires_at = timezone.now() + timedelta(minutes=10)
+        self.save()
+        return self
