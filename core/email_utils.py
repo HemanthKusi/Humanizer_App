@@ -262,3 +262,53 @@ def send_current_email_verification(user, code):
             f'email={user.email} | error={str(e)}'
         )
         return False
+    
+def send_password_reset_email(email, code):
+    """
+    Send a password reset OTP code.
+
+    Note: we send to the email address provided, not to a user object.
+    This is intentional — we don't confirm whether an account exists.
+
+    Args:
+        email: The email address to send to
+        code: The 6-digit OTP code
+
+    Returns:
+        True if sent, False if failed
+    """
+    subject = 'Rewright — Reset your password'
+
+    # Extract username-like part from email for the greeting
+    name = email.split('@')[0]
+
+    text_body = (
+        f'Hi {name},\n\n'
+        f'Your password reset code is: {code}\n\n'
+        f'Enter this code on the password reset page to set a new password.\n'
+        f'This code expires in 10 minutes.\n\n'
+        f'If you did not request a password reset, please ignore this email.\n\n'
+        f'— Rewright'
+    )
+
+    html_body = _build_otp_email_html(name, code, purpose='password')
+
+    try:
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=text_body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[email],
+        )
+        msg.attach_alternative(html_body, 'text/html')
+        msg.send(fail_silently=False)
+
+        api_logger.info(
+            f'PASSWORD RESET EMAIL SENT | email={email}'
+        )
+        return True
+    except Exception as e:
+        api_logger.error(
+            f'PASSWORD RESET EMAIL FAILED | email={email} | error={str(e)}'
+        )
+        return False

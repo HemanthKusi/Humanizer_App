@@ -59,6 +59,9 @@ urlpatterns = [
     # Email verification page
     # Users can enter their email OTP code here
     path('verify/', views.verify_email_view, name='verify_email'),
+    # Users can request a password reset here
+    # This is the view where users can enter their email to receive a password reset link
+    path('forgot-password/', views.forgot_password_view, name='forgot_password'),
 
     # ── API endpoints ──
 

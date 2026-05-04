@@ -36,7 +36,7 @@ from .readability import flesch_reading_ease
 
 from .language import detect_language
 
-from .models import UserPreferences, Feedback, RewriteLog, EmailVerification, EmailChangeRequest
+from .models import UserPreferences, Feedback, RewriteLog, EmailVerification, EmailChangeRequest, PasswordReset
  
 from .email_utils import send_verification_email
 
@@ -547,8 +547,8 @@ from django.contrib.auth import authenticate, login, logout, update_session_auth
 from django.contrib.auth.models import User
 from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
-from .forms import SignUpForm, LoginForm, EditProfileForm, ChangePasswordForm, PreferencesForm, FeedbackForm, OTPForm, ChangeEmailForm
-from .email_utils import send_verification_email, send_email_change_verification, send_current_email_verification
+from .forms import SignUpForm, LoginForm, EditProfileForm, ChangePasswordForm, PreferencesForm, FeedbackForm, OTPForm, ChangeEmailForm, ForgotPasswordForm, ResetPasswordForm
+from .email_utils import send_verification_email, send_email_change_verification, send_current_email_verification, send_password_reset_email
 
 
 def signup_view(request: HttpRequest) -> HttpResponse:
@@ -719,6 +719,9 @@ def login_view(request: HttpRequest) -> HttpResponse:
     """
     if request.user.is_authenticated:
         return redirect('index')
+    
+    # Check for password reset success message
+    password_reset_success = request.session.pop('password_reset_success', False)
 
     # Pick up restriction messages from allauth redirect
     from django.contrib.messages import get_messages
@@ -808,8 +811,177 @@ def login_view(request: HttpRequest) -> HttpResponse:
     else:
         form = LoginForm()
 
-    return render(request, 'core/login.html', {'form': form})
+    return render(request, 'core/login.html', {
+        'form': form,
+        'password_reset_success': password_reset_success,
+    })
 
+def forgot_password_view(request: HttpRequest) -> HttpResponse:
+    """
+    Forgot password — multi-step OTP-based password reset.
+
+    All three steps happen on the same page:
+    Step 1: Enter email → send OTP
+    Step 2: Enter OTP → verify code
+    Step 3: Enter new password → update and redirect to login
+
+    Security: we never reveal whether an email has an account.
+    We always say "If an account exists, we sent a code."
+
+    Args:
+        request: The incoming HTTP request
+
+    Returns:
+        Rendered forgot_password.html at the appropriate step
+    """
+    # If already logged in, go to homepage
+    if request.user.is_authenticated:
+        return redirect('index')
+
+    # Track which step we're on using session
+    step = request.session.get('reset_step', 1)
+    reset_email = request.session.get('reset_email', '')
+
+    email_form = ForgotPasswordForm()
+    otp_form = OTPForm()
+    password_form = ResetPasswordForm()
+    error_message = None
+    info_message = None
+
+    if request.method == 'POST':
+        action = request.POST.get('action', '')
+
+        # ── Step 1: Submit email ──
+        if action == 'send_code':
+            email_form = ForgotPasswordForm(request.POST)
+
+            if email_form.is_valid():
+                email = email_form.cleaned_data['email'].lower().strip()
+
+                # Check if user exists (but don't reveal it)
+                try:
+                    user = User.objects.get(email=email)
+                    # User exists — create and send OTP
+                    reset = PasswordReset.create_for_email(email)
+                    send_password_reset_email(email, reset.code)
+                except User.DoesNotExist:
+                    # User doesn't exist — silently do nothing
+                    # We still show the same message to prevent enumeration
+                    pass
+
+                # Always show the same message regardless
+                request.session['reset_step'] = 2
+                request.session['reset_email'] = email
+                step = 2
+                info_message = 'If an account exists with that email, we sent a verification code.'
+
+                api_logger.info(
+                    f'PASSWORD RESET REQUESTED | email={email} | '
+                    f'ip={request.META.get("REMOTE_ADDR")}'
+                )
+
+        # ── Step 2: Verify OTP ──
+        elif action == 'verify_code' and step == 2:
+            otp_form = OTPForm(request.POST)
+
+            if otp_form.is_valid():
+                entered_code = otp_form.cleaned_data['code']
+
+                # Find the reset record
+                try:
+                    reset = PasswordReset.objects.get(
+                        email=reset_email,
+                        is_used=False,
+                    )
+
+                    if reset.is_expired():
+                        error_message = 'Code expired. Please request a new one.'
+                        # Go back to step 1
+                        request.session['reset_step'] = 1
+                        step = 1
+                    elif reset.code != entered_code:
+                        error_message = 'Incorrect code. Please try again.'
+                    else:
+                        # Code correct — advance to step 3
+                        request.session['reset_step'] = 3
+                        request.session['reset_code_verified'] = True
+                        step = 3
+                        otp_form = OTPForm()
+
+                except PasswordReset.DoesNotExist:
+                    error_message = 'No reset request found. Please start over.'
+                    request.session['reset_step'] = 1
+                    step = 1
+
+        # ── Step 3: Set new password ──
+        elif action == 'set_password' and step == 3:
+            # Verify the session is valid (they went through step 2)
+            if not request.session.get('reset_code_verified'):
+                request.session['reset_step'] = 1
+                step = 1
+                error_message = 'Session expired. Please start over.'
+            else:
+                password_form = ResetPasswordForm(request.POST)
+
+                if password_form.is_valid():
+                    new_password = password_form.cleaned_data['new_password']
+
+                    try:
+                        user = User.objects.get(email=reset_email)
+                        user.set_password(new_password)
+                        user.save()
+
+                        # Mark the reset code as used
+                        PasswordReset.objects.filter(
+                            email=reset_email,
+                            is_used=False,
+                        ).update(is_used=True)
+
+                        # Clean up session
+                        for key in ['reset_step', 'reset_email', 'reset_code_verified']:
+                            request.session.pop(key, None)
+
+                        api_logger.info(
+                            f'PASSWORD RESET COMPLETE | user={user.username} (id={user.id}) | '
+                            f'ip={request.META.get("REMOTE_ADDR")}'
+                        )
+
+                        # Redirect to login with a success message
+                        request.session['password_reset_success'] = True
+                        return redirect('login')
+
+                    except User.DoesNotExist:
+                        error_message = 'Account not found. Please start over.'
+                        request.session['reset_step'] = 1
+                        step = 1
+
+        # ── Resend code ──
+        elif action == 'resend_code' and step == 2:
+            if reset_email:
+                try:
+                    user = User.objects.get(email=reset_email)
+                    reset = PasswordReset.create_for_email(reset_email)
+                    send_password_reset_email(reset_email, reset.code)
+                except User.DoesNotExist:
+                    pass
+                info_message = 'If an account exists with that email, we sent a new code.'
+
+        # ── Start over ──
+        elif action == 'start_over':
+            for key in ['reset_step', 'reset_email', 'reset_code_verified']:
+                request.session.pop(key, None)
+            step = 1
+            reset_email = ''
+
+    return render(request, 'core/forgot_password.html', {
+        'step': step,
+        'reset_email': reset_email,
+        'email_form': email_form,
+        'otp_form': otp_form,
+        'password_form': password_form,
+        'error_message': error_message,
+        'info_message': info_message,
+    })
 
 def logout_view(request: HttpRequest) -> HttpResponse:
     """
