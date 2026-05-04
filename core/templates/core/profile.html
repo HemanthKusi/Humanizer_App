@@ -80,6 +80,104 @@
                 </div>
             </div>
 
+            <!-- ── Change Email (Two-Step Verification) ── -->
+            <div class="profile-card">
+                <h2 class="profile-card-title">Change email</h2>
+                <p class="profile-note" style="margin-bottom: 0.75rem;">
+                    Current email: <strong>{{ user.email }}</strong>
+                </p>
+
+                {% if email_changed %}
+                    <div class="profile-success">Email changed successfully to {{ user.email }}.</div>
+                {% endif %}
+
+                {% if email_error %}
+                    <div class="auth-error">{{ email_error }}</div>
+                {% endif %}
+
+                {% if email_info %}
+                    <div class="profile-success">{{ email_info }}</div>
+                {% endif %}
+
+                {% if pending and pending.step == 1 %}
+                    <!-- Step 1: Verify current email -->
+                    <div class="email-change-step">
+                        <div class="email-step-badge">Step 1 of 2</div>
+                        <p class="profile-note" style="margin-bottom: 1rem;">
+                            Enter the code we sent to your current email
+                            <strong>{{ user.email }}</strong> to confirm your identity.
+                        </p>
+
+                        <form method="POST" action="{% url 'profile' %}" class="profile-form" novalidate>
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="verify_current_email">
+
+                            <div class="otp-wrapper">
+                                {{ otp_form.code }}
+                                {% if otp_form.code.errors %}
+                                    <span class="field-error">{{ otp_form.code.errors.0 }}</span>
+                                {% endif %}
+                            </div>
+
+                            <button type="submit" class="profile-submit">Verify current email</button>
+                        </form>
+
+                        <form method="POST" action="{% url 'profile' %}" style="margin-top: 0.75rem; text-align: center;">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="cancel_email_change">
+                            <button type="submit" class="email-cancel-btn">Cancel</button>
+                        </form>
+                    </div>
+
+                {% elif pending and pending.step == 2 %}
+                    <!-- Step 2: Verify new email -->
+                    <div class="email-change-step">
+                        <div class="email-step-badge step-2">Step 2 of 2</div>
+                        <p class="profile-note" style="margin-bottom: 1rem;">
+                            Now enter the code we sent to your new email
+                            <strong>{{ pending.new_email }}</strong>.
+                        </p>
+
+                        <form method="POST" action="{% url 'profile' %}" class="profile-form" novalidate>
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="verify_new_email">
+
+                            <div class="otp-wrapper">
+                                {{ otp_form.code }}
+                                {% if otp_form.code.errors %}
+                                    <span class="field-error">{{ otp_form.code.errors.0 }}</span>
+                                {% endif %}
+                            </div>
+
+                            <button type="submit" class="profile-submit">Verify new email</button>
+                        </form>
+
+                        <form method="POST" action="{% url 'profile' %}" style="margin-top: 0.75rem; text-align: center;">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="cancel_email_change">
+                            <button type="submit" class="email-cancel-btn">Cancel</button>
+                        </form>
+                    </div>
+
+                {% else %}
+                    <!-- Step 0: Enter new email -->
+                    <form method="POST" action="{% url 'profile' %}" class="profile-form" novalidate>
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="change_email">
+
+                        <div class="form-group {% if email_form.new_email.errors %}has-error{% endif %}">
+                            <label for="id_new_email">New email address</label>
+                            {{ email_form.new_email }}
+                            {% if email_form.new_email.errors %}
+                                <span class="field-error">{{ email_form.new_email.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+
+                        <button type="submit" class="profile-submit">Change email</button>
+                    </form>
+                {% endif %}
+            </div>
+
             <!-- ── Edit Name ── -->
             <div class="profile-card">
                 <h2 class="profile-card-title">Edit profile</h2>
