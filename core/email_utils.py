@@ -39,6 +39,9 @@ def _build_otp_email_html(username, code, purpose='verify'):
     elif purpose == 'email_change':
         heading = 'Confirm your new email'
         instruction = 'Enter this code to confirm this email address for your Rewright account.'
+    elif purpose == 'identity':
+        heading = 'Confirm your identity'
+        instruction = 'You requested to change your email. Enter this code to verify your current email first.'
     else:
         heading = 'Your verification code'
         instruction = 'Enter this code to continue.'
@@ -209,5 +212,53 @@ def send_email_change_verification(user, new_email, code):
         api_logger.error(
             f'EMAIL CHANGE VERIFICATION FAILED | user={user.username} (id={user.id}) | '
             f'new_email={new_email} | error={str(e)}'
+        )
+        return False
+    
+def send_current_email_verification(user, code):
+    """
+    Send OTP to the user's CURRENT email to prove ownership
+    before allowing an email change.
+
+    Args:
+        user: The User object
+        code: The 6-digit OTP code
+
+    Returns:
+        True if sent, False if failed
+    """
+    subject = 'Rewright — Verify your identity'
+
+    text_body = (
+        f'Hi {user.username},\n\n'
+        f'You requested to change your email address.\n'
+        f'Your verification code is: {code}\n\n'
+        f'Enter this code to confirm your identity before changing your email.\n'
+        f'This code expires in 10 minutes.\n\n'
+        f'If you did not request this, please ignore this email.\n\n'
+        f'— Rewright'
+    )
+
+    html_body = _build_otp_email_html(user.username, code, purpose='identity')
+
+    try:
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=text_body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[user.email],
+        )
+        msg.attach_alternative(html_body, 'text/html')
+        msg.send(fail_silently=False)
+
+        api_logger.info(
+            f'IDENTITY VERIFICATION SENT | user={user.username} (id={user.id}) | '
+            f'email={user.email}'
+        )
+        return True
+    except Exception as e:
+        api_logger.error(
+            f'IDENTITY VERIFICATION FAILED | user={user.username} (id={user.id}) | '
+            f'email={user.email} | error={str(e)}'
         )
         return False

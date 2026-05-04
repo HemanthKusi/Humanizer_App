@@ -36,7 +36,7 @@ from .readability import flesch_reading_ease
 
 from .language import detect_language
 
-from .models import UserPreferences, Feedback, RewriteLog, EmailVerification
+from .models import UserPreferences, Feedback, RewriteLog, EmailVerification, EmailChangeRequest
  
 from .email_utils import send_verification_email
 
@@ -547,7 +547,8 @@ from django.contrib.auth import authenticate, login, logout, update_session_auth
 from django.contrib.auth.models import User
 from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
-from .forms import SignUpForm, LoginForm, EditProfileForm, ChangePasswordForm, PreferencesForm, FeedbackForm, OTPForm
+from .forms import SignUpForm, LoginForm, EditProfileForm, ChangePasswordForm, PreferencesForm, FeedbackForm, OTPForm, ChangeEmailForm
+from .email_utils import send_verification_email, send_email_change_verification, send_current_email_verification
 
 
 def signup_view(request: HttpRequest) -> HttpResponse:
@@ -835,107 +836,191 @@ def logout_view(request: HttpRequest) -> HttpResponse:
 @login_required
 def profile_view(request: HttpRequest) -> HttpResponse:
     """
-    User profile page — shows account info and edit forms.
+    User profile page — account info, edit name, change password,
+    change email (two-step OTP), delete account.
 
-    Displays:
-    - Username, email, join date
-    - Edit name form
-    - Change password form
-    - Delete account option
-
-    The @login_required decorator means:
-    - If user is logged in → show the profile page
-    - If user is NOT logged in → redirect to /login/?next=/profile/
-
-    Args:
-        request: The incoming HTTP request
-
-    Returns:
-        Rendered profile.html with user info and forms
+    Email change flow:
+    Step 0: User enters new email → we send OTP to CURRENT email
+    Step 1: User verifies current email with OTP → we send OTP to NEW email
+    Step 2: User verifies new email with OTP → email gets updated
     """
     user = request.user
-
-    # Check if this user signed up with Google (has no usable password)
-    # Google users can't change password because they don't have one
     has_password = user.has_usable_password()
 
-    # Pre-fill the edit form with current values
+    # Forms
     edit_form = EditProfileForm(initial={
         'first_name': user.first_name,
         'last_name': user.last_name,
     })
-
     password_form = ChangePasswordForm()
+    email_form = ChangeEmailForm(current_email=user.email)
+    otp_form = OTPForm()
 
-    # Messages for success/error feedback
+    # Success/error flags
     edit_success = False
     password_success = False
+    email_changed = False
+    email_error = None
+    email_info = None
+
+    # Check for pending email change
+    pending = EmailChangeRequest.objects.filter(user=user).first()
 
     if request.method == 'POST':
         action = request.POST.get('action', '')
 
-        # ── Handle name edit ──
+        # ── Edit name ──
         if action == 'edit_profile':
             edit_form = EditProfileForm(request.POST)
-
             if edit_form.is_valid():
                 user.first_name = edit_form.cleaned_data['first_name']
                 user.last_name = edit_form.cleaned_data['last_name']
                 user.save()
                 edit_success = True
-
                 api_logger.info(
                     f'PROFILE EDIT | user={user.username} (id={user.id}) | '
                     f'ip={request.META.get("REMOTE_ADDR")}'
                 )
 
-        # ── Handle password change ──
+        # ── Change password ──
         elif action == 'change_password':
             password_form = ChangePasswordForm(request.POST)
-
             if password_form.is_valid():
                 current = password_form.cleaned_data['current_password']
-
-                # Verify current password is correct
                 if not user.check_password(current):
                     password_form.add_error('current_password', 'Current password is incorrect.')
                 else:
-                    new_pass = password_form.cleaned_data['new_password']
-                    user.set_password(new_pass)
+                    user.set_password(password_form.cleaned_data['new_password'])
                     user.save()
-
-                    # Keep the user logged in after password change
-                    # Without this, changing password logs you out
-                    # because the session hash no longer matches
                     update_session_auth_hash(request, user)
-
                     password_success = True
-                    password_form = ChangePasswordForm()  # Clear the form
-
+                    password_form = ChangePasswordForm()
                     api_logger.info(
                         f'PASSWORD CHANGED | user={user.username} (id={user.id}) | '
                         f'ip={request.META.get("REMOTE_ADDR")}'
                     )
 
-        # ── Handle account deletion ──
+        # ── Step 0: Request email change → send OTP to CURRENT email ──
+        elif action == 'change_email':
+            email_form = ChangeEmailForm(request.POST, current_email=user.email)
+            if email_form.is_valid():
+                new_email = email_form.cleaned_data['new_email']
+                pending = EmailChangeRequest.create_for_user(user, new_email)
+                sent = send_current_email_verification(user, pending.code)
+                if sent:
+                    email_info = f'We sent a verification code to your current email ({user.email}). Enter it below.'
+                    api_logger.info(
+                        f'EMAIL CHANGE STEP1 | user={user.username} (id={user.id}) | '
+                        f'new_email={new_email} | sent_to={user.email} | '
+                        f'ip={request.META.get("REMOTE_ADDR")}'
+                    )
+                else:
+                    email_error = 'Could not send verification email. Please try again.'
+                    pending.delete()
+                    pending = None
+
+        # ── Step 1: Verify CURRENT email → then send OTP to NEW email ──
+        elif action == 'verify_current_email':
+            otp_form = OTPForm(request.POST)
+            if otp_form.is_valid() and pending and pending.step == 1:
+                entered_code = otp_form.cleaned_data['code']
+                if pending.is_expired():
+                    email_error = 'Code expired. Please start over.'
+                    pending.delete()
+                    pending = None
+                elif pending.code != entered_code:
+                    email_error = 'Incorrect code. Please check your current email and try again.'
+                else:
+                    # Current email verified — advance to step 2
+                    pending.advance_to_step2()
+                    sent = send_email_change_verification(user, pending.new_email, pending.code)
+                    if sent:
+                        email_info = f'Current email verified. Now check your new email ({pending.new_email}) for the next code.'
+                        otp_form = OTPForm()
+                        api_logger.info(
+                            f'EMAIL CHANGE STEP2 | user={user.username} (id={user.id}) | '
+                            f'new_email={pending.new_email} | '
+                            f'ip={request.META.get("REMOTE_ADDR")}'
+                        )
+                    else:
+                        email_error = 'Could not send verification to new email. Please try again.'
+                        pending.delete()
+                        pending = None
+            elif pending and pending.step != 1:
+                email_error = 'Invalid step. Please start over.'
+            elif not pending:
+                email_error = 'No pending request. Please start over.'
+
+        # ── Step 2: Verify NEW email → update the email ──
+        elif action == 'verify_new_email':
+            otp_form = OTPForm(request.POST)
+            if otp_form.is_valid() and pending and pending.step == 2:
+                entered_code = otp_form.cleaned_data['code']
+                if pending.is_expired():
+                    email_error = 'Code expired. Please start over.'
+                    pending.delete()
+                    pending = None
+                elif pending.code != entered_code:
+                    email_error = 'Incorrect code. Please check your new email and try again.'
+                else:
+                    # Both emails verified — update the email
+                    old_email = user.email
+                    user.email = pending.new_email
+                    user.save()
+
+                    # Keep email verification status
+                    try:
+                        ev = EmailVerification.objects.get(user=user)
+                        ev.is_verified = True
+                        ev.save()
+                    except EmailVerification.DoesNotExist:
+                        pass
+
+                    api_logger.info(
+                        f'EMAIL CHANGED | user={user.username} (id={user.id}) | '
+                        f'old={old_email} | new={user.email} | '
+                        f'ip={request.META.get("REMOTE_ADDR")}'
+                    )
+
+                    pending.delete()
+                    pending = None
+                    email_changed = True
+                    email_form = ChangeEmailForm(current_email=user.email)
+                    otp_form = OTPForm()
+            elif pending and pending.step != 2:
+                email_error = 'Invalid step. Please start over.'
+            elif not pending:
+                email_error = 'No pending request. Please start over.'
+
+        # ── Cancel email change ──
+        elif action == 'cancel_email_change':
+            if pending:
+                pending.delete()
+                pending = None
+
+        # ── Delete account ──
         elif action == 'delete_account':
             username = user.username
             user_id = user.id
             user.delete()
             logout(request)
-
             api_logger.info(
                 f'ACCOUNT DELETED | user={username} (id={user_id}) | '
                 f'ip={request.META.get("REMOTE_ADDR")}'
             )
-
             return redirect('index')
 
     return render(request, 'core/profile.html', {
         'edit_form': edit_form,
         'password_form': password_form,
+        'email_form': email_form,
+        'otp_form': otp_form,
         'edit_success': edit_success,
         'password_success': password_success,
+        'email_changed': email_changed,
+        'email_error': email_error,
+        'email_info': email_info,
+        'pending': pending,
         'has_password': has_password,
     })
 
