@@ -1,14 +1,31 @@
 /*
     main.js — Rewright UI Controller
 
-    1. Solar system background
-    2. Theme toggling
-    3. Character counters (both panels)
-    4. Rewrite button → API call
-    5. Result + inline stats + collapsible changes
-    6. Copy with checkmark
-    7. Toast
+    1. Timezone cookie
+    2. Solar system background
+    3. Theme toggling
+    4. Character counters (both panels)
+    5. Rewrite button → API call
+    6. Result + inline stats + collapsible changes
+    7. Copy with checkmark
+    8. Download button
+    9. Toast
 */
+
+/* ═══════════════════════════════════════════════════════════════════
+   TIMEZONE COOKIE
+   Sets a cookie with the browser's timezone so Django can display
+   all dates in the user's local time. Runs on every page load.
+   ═══════════════════════════════════════════════════════════════════ */
+
+(function () {
+    try {
+        var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (tz && document.cookie.indexOf('user_timezone=' + tz) === -1) {
+            document.cookie = 'user_timezone=' + tz + ';path=/;max-age=31536000;SameSite=Lax';
+        }
+    } catch (e) { }
+})();
 
 
 /* ═══════════════════════════════════════════════════════════════════

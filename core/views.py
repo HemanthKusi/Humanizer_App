@@ -1491,13 +1491,10 @@ def analytics_view(request: HttpRequest) -> HttpResponse:
     avg_input_words = round(avg_input) if avg_input else 0
 
     # ── Row 3: Activity ──
-    # Use the user's timezone from the browser for accurate "today/this week" counts
+    # Use the timezone already activated by TimezoneMiddleware
     import zoneinfo
-    user_tz_name = request.GET.get('tz', 'UTC')
-    try:
-        user_tz = zoneinfo.ZoneInfo(user_tz_name)
-    except (KeyError, Exception):
-        user_tz = zoneinfo.ZoneInfo('UTC')
+    from django.utils import timezone as dj_timezone
+    user_tz = dj_timezone.get_current_timezone()
 
     now_utc = timezone.now()
     now_local = now_utc.astimezone(user_tz)
@@ -1646,12 +1643,9 @@ def admin_analytics_view(request: HttpRequest) -> HttpResponse:
     import datetime
     import zoneinfo
 
-    # Use admin's timezone from browser
-    user_tz_name = request.GET.get('tz', 'UTC')
-    try:
-        user_tz = zoneinfo.ZoneInfo(user_tz_name)
-    except (KeyError, Exception):
-        user_tz = zoneinfo.ZoneInfo('UTC')
+    # Use the timezone already activated by TimezoneMiddleware
+    from django.utils import timezone as dj_timezone
+    user_tz = dj_timezone.get_current_timezone()
 
     now_utc = timezone.now()
     now_local = now_utc.astimezone(user_tz)

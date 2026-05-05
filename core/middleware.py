@@ -162,3 +162,90 @@ class SimpleRateLimiter:
         ]
         for ip in stale_ips:
             del self.requests[ip]
+
+import zoneinfo
+from django.utils import timezone as dj_timezone
+
+
+class TimezoneMiddleware:
+    """
+    Activates the user's local timezone for every request.
+
+    How it works:
+    1. Browser JavaScript sets a 'user_timezone' cookie with the
+       IANA timezone name (e.g., 'America/Denver', 'Asia/Tokyo')
+    2. This middleware reads that cookie on every request
+    3. Django's timezone.activate() makes all |date template filters
+       render in that timezone automatically
+    4. For logged-in users, we also save it to UserPreferences
+       so it persists even if cookies are cleared
+
+    The cookie is set by a tiny <script> tag included on every page.
+    """
+
+    def __init__(self, get_response):
+        """
+        Called once when the server starts.
+
+        Args:
+            get_response: The next middleware or view in the chain
+        """
+        self.get_response = get_response
+
+    def __call__(self, request):
+        """
+        Called on every request.
+
+        Reads the timezone cookie, validates it, and activates it.
+        Falls back to UTC if the cookie is missing or invalid.
+
+        Args:
+            request: The incoming HTTP request
+
+        Returns:
+            The HTTP response from the next middleware/view
+        """
+        tz_name = request.COOKIES.get('user_timezone', '')
+
+        if tz_name:
+            try:
+                user_tz = zoneinfo.ZoneInfo(tz_name)
+                dj_timezone.activate(user_tz)
+
+                # Save to UserPreferences for logged-in users
+                # Only update if it changed (avoid a DB write on every request)
+                if request.user.is_authenticated:
+                    from core.models import UserPreferences
+                    try:
+                        prefs = UserPreferences.objects.get(user=request.user)
+                        if prefs.timezone != tz_name:
+                            prefs.timezone = tz_name
+                            prefs.save(update_fields=['timezone'])
+                    except UserPreferences.DoesNotExist:
+                        # No prefs yet — will be created when they visit settings
+                        pass
+
+            except (KeyError, Exception):
+                # Invalid timezone name — fall back to UTC
+                dj_timezone.deactivate()
+        else:
+            # No cookie — try to use saved preference for logged-in users
+            if request.user.is_authenticated:
+                from core.models import UserPreferences
+                try:
+                    prefs = UserPreferences.objects.get(user=request.user)
+                    if prefs.timezone and prefs.timezone != 'UTC':
+                        try:
+                            user_tz = zoneinfo.ZoneInfo(prefs.timezone)
+                            dj_timezone.activate(user_tz)
+                        except (KeyError, Exception):
+                            dj_timezone.deactivate()
+                    else:
+                        dj_timezone.deactivate()
+                except UserPreferences.DoesNotExist:
+                    dj_timezone.deactivate()
+            else:
+                dj_timezone.deactivate()
+
+        response = self.get_response(request)
+        return response

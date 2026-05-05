@@ -77,6 +77,12 @@ class UserPreferences(models.Model):
 
     terms_accepted_at = models.DateTimeField(null=True, blank=True)
 
+    timezone = models.CharField(
+        max_length=63,
+        default='UTC',
+        help_text='User browser timezone (e.g., America/Denver)',
+    )
+
     class Meta:
         verbose_name_plural = 'User preferences'
 
