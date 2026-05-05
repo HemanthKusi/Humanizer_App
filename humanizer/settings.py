@@ -342,6 +342,7 @@ ACCOUNT_SIGNUP_URL = '/signup/'
 
 # Redirect allauth's default login/signup URLs to ours
 ACCOUNT_ADAPTER = 'core.adapters.CustomAccountAdapter'
+SOCIALACCOUNT_ADAPTER = 'core.adapters.CustomSocialAccountAdapter'
 
 # After social login, redirect to homepage
 SOCIALACCOUNT_LOGIN_ON_GET = True
@@ -349,6 +350,8 @@ SOCIALACCOUNT_LOGIN_ON_GET = True
 # Don't ask for extra info after Google sign-in
 # Just create the account and log them in
 SOCIALACCOUNT_AUTO_SIGNUP = True
+# Automatically connect social accounts to existing users
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 
 # Use email as the primary identifier
 ACCOUNT_EMAIL_REQUIRED = True
