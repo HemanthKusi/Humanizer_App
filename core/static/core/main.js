@@ -36,7 +36,7 @@
 */
 
 const canvas = document.getElementById('solar-system');
-const ctx = canvas.getContext('2d');
+const ctx = canvas ? canvas.getContext('2d') : null;
 let isPremium = false;
 let time = 0;
 
@@ -146,6 +146,7 @@ const planets = [
 
 
 function resizeCanvas() {
+    if (!canvas) return;
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 }
@@ -372,9 +373,11 @@ function drawSolarSystem() {
 }
 
 /* Start */
-resizeCanvas();
-drawSolarSystem();
-window.addEventListener('resize', resizeCanvas);
+if (canvas && ctx) {
+    resizeCanvas();
+    drawSolarSystem();
+    window.addEventListener('resize', resizeCanvas);
+}
 
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -1849,4 +1852,48 @@ if (inputText && toggleDeep && btnRewrite) {
         if (fabCount)   fabCount.textContent = '0 / 2,000';
         if (fabSubmit)  { fabSubmit.disabled = false; fabSubmit.textContent = 'Submit'; }
     }
+})();
+
+/* ═══════════════════════════════════════════════════════════════════
+   PASSWORD VISIBILITY TOGGLE
+   Toggles password fields between hidden (dots) and visible (text).
+   The eye icon switches between "eye open" and "eye with slash".
+   ═══════════════════════════════════════════════════════════════════ */
+
+(function () {
+    /**
+     * SVG icon for "eye open" — password is hidden, click to show.
+     */
+    const eyeOpen = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+
+    /**
+     * SVG icon for "eye with slash" — password is visible, click to hide.
+     */
+    const eyeSlash = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+
+    /* Find all toggle buttons on the page */
+    const toggles = document.querySelectorAll('.password-toggle');
+
+    toggles.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            /* The input is the sibling right before this button inside .password-wrapper */
+            const wrapper = btn.closest('.password-wrapper');
+            if (!wrapper) return;
+
+            const input = wrapper.querySelector('input');
+            if (!input) return;
+
+            if (input.type === 'password') {
+                /* Show the password */
+                input.type = 'text';
+                btn.innerHTML = eyeSlash;
+                btn.setAttribute('aria-label', 'Hide password');
+            } else {
+                /* Hide the password */
+                input.type = 'password';
+                btn.innerHTML = eyeOpen;
+                btn.setAttribute('aria-label', 'Show password');
+            }
+        });
+    });
 })();

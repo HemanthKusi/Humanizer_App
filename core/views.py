@@ -1187,6 +1187,13 @@ def profile_view(request: HttpRequest) -> HttpResponse:
                 f'ip={request.META.get("REMOTE_ADDR")}'
             )
             return redirect('index')
+        
+    # Get terms acceptance date
+    try:
+        user_prefs = UserPreferences.objects.get(user=user)
+        terms_accepted_at = user_prefs.terms_accepted_at
+    except UserPreferences.DoesNotExist:
+        terms_accepted_at = None
 
     return render(request, 'core/profile.html', {
         'edit_form': edit_form,
@@ -1200,6 +1207,7 @@ def profile_view(request: HttpRequest) -> HttpResponse:
         'email_info': email_info,
         'pending': pending,
         'has_password': has_password,
+        'terms_accepted_at': terms_accepted_at,
     })
 
 from django.contrib.admin.views.decorators import staff_member_required

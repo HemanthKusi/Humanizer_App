@@ -1894,6 +1894,67 @@ body.premium .nav-logout:hover {
     color: #0f0f19 !important;
 }
 
+/* ── Nav icons ── */
+.nav-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    display: none;
+}
+
+/* Show icons on desktop */
+@media (min-width: 861px) {
+    .nav-icon {
+        display: block;
+    }
+
+    .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .nav-logout {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+}
+
+/* Mobile: icons only, no text */
+@media (max-width: 860px) {
+    .nav-icon {
+        display: block;
+        width: 18px;
+        height: 18px;
+    }
+
+    .nav-text {
+        display: none;
+    }
+
+    .nav-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.45rem;
+        min-width: 36px;
+    }
+
+    .nav-logout {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.45rem;
+        min-width: 36px;
+    }
+
+    .header-nav {
+        gap: 0.2rem;
+        padding: 0.3rem;
+    }
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    GOOGLE SIGN-IN BUTTON & DIVIDER
    ═══════════════════════════════════════════════════════════════════ */
@@ -4497,4 +4558,44 @@ body.premium .email-cancel-btn {
 
 .google-terms-note a:hover {
     color: var(--accent);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   PASSWORD VISIBILITY TOGGLE
+   Eye icon inside password fields to show/hide password.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.password-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.password-wrapper input {
+    padding-right: 2.8rem !important;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 0.65rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-tertiary);
+    transition: color 0.2s ease;
+}
+
+.password-toggle:hover {
+    color: var(--text-secondary);
+}
+
+.password-toggle svg {
+    width: 18px;
+    height: 18px;
 }
