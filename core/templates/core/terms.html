@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms and Conditions — Rewright</title>
+    <link rel="icon" href="{% static 'core/favicon.svg' %}" type="image/svg+xml">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="{% static 'core/style.css' %}">
+</head>
+<body>
+
+    <div class="bg-grain"></div>
+
+    <header>
+        <a href="/" class="logo">
+            <div class="logo-mark">
+                <svg width="40" height="40" viewBox="0 0 32 32" fill="none">
+                    <ellipse cx="16" cy="16" rx="12" ry="12" stroke="var(--accent)" stroke-width="1" opacity="0.2"/>
+                    <ellipse cx="16" cy="16" rx="12" ry="5" stroke="var(--accent)" stroke-width="0.8" opacity="0.15" transform="rotate(-20 16 16)"/>
+                    <circle cx="16" cy="16" r="4.5" fill="var(--accent)"/>
+                    <circle cx="14.5" cy="14.5" r="2" fill="white" opacity="0.3"/>
+                    <circle cx="16" cy="16" r="2" fill="var(--accent)" opacity="0.8" class="logo-planet"/>
+                </svg>
+            </div>
+            <span class="logo-text">Rewright</span>
+        </a>
+
+        <nav class="header-nav">
+            <a href="/" class="nav-link">Home</a>
+            {% if user.is_authenticated %}
+                <a href="{% url 'settings' %}" class="nav-link">Settings</a>
+                <a href="{% url 'profile' %}" class="nav-link">{{ user.username }}</a>
+            {% else %}
+                <a href="{% url 'login' %}" class="nav-link">Log in</a>
+                <a href="{% url 'signup' %}" class="nav-link">Sign up</a>
+            {% endif %}
+        </nav>
+    </header>
+
+    <main class="auth-main">
+        <div class="legal-container">
+
+            <h1 class="legal-title">Terms and Conditions</h1>
+            <p class="legal-updated">Last updated: May 2026 · Placeholder — will be finalized before launch</p>
+
+            <div class="legal-content">
+
+                <h2>1. Agreement to Terms</h2>
+                <p>By accessing or using Rewright ("the Service"), you agree to be bound by these Terms and Conditions. If you do not agree, please do not use the Service. The Service is operated from Utah, United States.</p>
+
+                <h2>2. Description of Service</h2>
+                <p>Rewright is an AI-powered writing tool that rewrites AI-generated text to sound more natural and human-written. The Service offers both a free rule-based mode and a premium AI-powered mode that uses third-party language model APIs.</p>
+
+                <h2>3. User Accounts</h2>
+                <p>To access the full features of the Service, you must create an account. You are responsible for maintaining the confidentiality of your login credentials and for all activity under your account. You must provide a valid email address and verify it before using the Service.</p>
+
+                <h2>4. Acceptable Use</h2>
+                <p>You agree not to use the Service to process text that is illegal, harmful, threatening, abusive, defamatory, or otherwise objectionable. You may not attempt to circumvent usage limits, reverse-engineer the Service, or use automated tools to access it without permission. The Service includes profanity filtering and rate limiting to enforce these standards.</p>
+
+                <h2>5. Text Processing and Data</h2>
+                <p>Text you submit for rewriting is sent to our servers and, when using Deep Rewrite mode, to third-party AI providers (such as OpenAI) for processing. We do not permanently store the text you submit for rewriting. Rewrite logs (word counts, mode used, timestamps) are stored for analytics purposes but do not include the actual text content.</p>
+
+                <h2>6. Intellectual Property</h2>
+                <p>You retain ownership of any text you submit to the Service. The rewritten output is provided for your use without restriction. The Service itself, including its design, code, and branding, is the property of Rewright.</p>
+
+                <h2>7. Free and Paid Usage</h2>
+                <p>Guest users receive a limited number of free rewrites. Registered users receive higher usage limits. We reserve the right to modify usage limits at any time. The Service may introduce paid tiers in the future with advance notice.</p>
+
+                <h2>8. Account Termination</h2>
+                <p>We reserve the right to restrict or terminate accounts that violate these terms, abuse the Service, or engage in behavior that disrupts other users. You may delete your account at any time from your profile page.</p>
+
+                <h2>9. Limitation of Liability</h2>
+                <p>The Service is provided "as is" without warranties of any kind. We do not guarantee that rewritten text will be undetectable as AI-generated, factually accurate, or suitable for any specific purpose. You are responsible for reviewing and editing any output before use. We are not liable for any damages arising from your use of the Service.</p>
+
+                <h2>10. Changes to Terms</h2>
+                <p>We may update these terms from time to time. Continued use of the Service after changes constitutes acceptance of the updated terms. We will notify registered users of significant changes via email.</p>
+
+                <h2>11. Governing Law</h2>
+                <p>These terms are governed by the laws of the State of Utah, United States, without regard to conflict of law principles.</p>
+
+                <h2>12. Contact</h2>
+                <p>For questions about these terms, please use the feedback button on the website or contact us through the app.</p>
+
+            </div>
+
+            <div class="legal-back">
+                <a href="/" class="legal-back-link">← Back to Rewright</a>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="{% static 'core/main.js' %}"></script>
+</body>
+</html>

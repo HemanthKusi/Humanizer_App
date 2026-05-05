@@ -101,6 +101,22 @@
                     {% endif %}
                 </div>
 
+                <!-- Terms acceptance -->
+                <div class="form-group terms-group {% if form.accept_terms.errors %}has-error{% endif %}">
+                    <label class="terms-label">
+                        {{ form.accept_terms }}
+                        <span class="terms-text">
+                            I agree to the
+                            <a href="{% url 'terms' %}" target="_blank">Terms and Conditions</a>
+                            and
+                            <a href="{% url 'privacy' %}" target="_blank">Privacy Policy</a>
+                        </span>
+                    </label>
+                    {% if form.accept_terms.errors %}
+                        <span class="field-error">{{ form.accept_terms.errors.0 }}</span>
+                    {% endif %}
+                </div>
+
                 <button type="submit" class="auth-submit">Create account</button>
             </form>
 
@@ -117,6 +133,12 @@
                 </svg>
                 <span>Continue with Google</span>
             </a>
+
+            <p class="google-terms-note">
+                By continuing with Google, you agree to our
+                <a href="{% url 'terms' %}" target="_blank">Terms and Conditions</a> and
+                <a href="{% url 'privacy' %}" target="_blank">Privacy Policy</a>.
+            </p>
 
             <p class="auth-switch">
                 Already have an account? <a href="{% url 'login' %}">Log in</a>

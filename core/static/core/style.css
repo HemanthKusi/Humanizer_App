@@ -4363,3 +4363,138 @@ body.premium .email-cancel-btn {
 .forgot-password-link a:hover {
     opacity: 0.7;
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   LEGAL PAGES — Terms and Privacy Policy
+   ═══════════════════════════════════════════════════════════════════ */
+
+.legal-container {
+    max-width: 720px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+}
+
+.legal-title {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.4rem;
+}
+
+.legal-updated {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+    font-style: italic;
+}
+
+.legal-content h2 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-top: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.legal-content h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-top: 1.25rem;
+    margin-bottom: 0.4rem;
+}
+
+.legal-content p {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    margin-bottom: 0.75rem;
+}
+
+.legal-back {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+}
+
+.legal-back-link {
+    font-size: 0.85rem;
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+    transition: opacity 0.2s;
+}
+
+.legal-back-link:hover {
+    opacity: 0.7;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TERMS CHECKBOX — on signup form
+   ═══════════════════════════════════════════════════════════════════ */
+
+.terms-group {
+    margin-top: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.terms-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+.terms-checkbox {
+    margin-top: 0.2rem;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.terms-text {
+    color: var(--text-secondary);
+}
+
+.terms-text a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.terms-text a:hover {
+    text-decoration: underline;
+}
+
+.terms-group .field-error {
+    margin-left: 1.6rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   GOOGLE TERMS NOTE — below Google sign-in button
+   ═══════════════════════════════════════════════════════════════════ */
+
+.google-terms-note {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 0.6rem;
+    margin-bottom: 0.5rem;
+    line-height: 1.5;
+}
+
+.google-terms-note a {
+    color: var(--text-secondary);
+    text-decoration: underline;
+}
+
+.google-terms-note a:hover {
+    color: var(--accent);
+}

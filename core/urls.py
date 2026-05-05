@@ -62,6 +62,12 @@ urlpatterns = [
     # Users can request a password reset here
     # This is the view where users can enter their email to receive a password reset link
     path('forgot-password/', views.forgot_password_view, name='forgot_password'),
+    # Terms and Conditions page
+    # Users can read the terms and conditions here
+    path('terms/', views.terms_view, name='terms'),
+    # Privacy Policy page
+    # This is the view where users can read the privacy policy
+    path('privacy/', views.privacy_view, name='privacy'),
 
     # ── API endpoints ──
 

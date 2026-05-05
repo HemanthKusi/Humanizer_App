@@ -75,6 +75,8 @@ class UserPreferences(models.Model):
         help_text='Which tone is pre-selected in Deep Rewrite mode',
     )
 
+    terms_accepted_at = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         verbose_name_plural = 'User preferences'
 

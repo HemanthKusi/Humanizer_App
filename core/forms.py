@@ -74,6 +74,16 @@ class SignUpForm(forms.Form):
         }),
     )
 
+    accept_terms = forms.BooleanField(
+        required=True,
+        widget=forms.CheckboxInput(attrs={
+            'class': 'terms-checkbox',
+        }),
+        error_messages={
+            'required': 'You must accept the Terms and Privacy Policy to create an account.',
+        }
+    )
+
     def clean_username(self):
         """
         Validate the username field.

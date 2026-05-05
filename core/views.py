@@ -592,6 +592,12 @@ def signup_view(request: HttpRequest) -> HttpResponse:
             # Log the user in immediately after signup
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
 
+            # Record terms acceptance
+            from django.utils import timezone
+            prefs, _ = UserPreferences.objects.get_or_create(user=user)
+            prefs.terms_accepted_at = timezone.now()
+            prefs.save()
+
             api_logger.info(
                 f'SIGNUP | user={user.username} (id={user.id}) | email={user.email} | '
                 f'ip={request.META.get("REMOTE_ADDR")}'
@@ -1871,3 +1877,12 @@ def feedback_api(request: HttpRequest) -> JsonResponse:
             {'error': 'Something went wrong. Please try again.'},
             status=500
         )
+    
+def terms_view(request: HttpRequest) -> HttpResponse:
+    """Terms and Conditions page."""
+    return render(request, 'core/terms.html')
+
+
+def privacy_view(request: HttpRequest) -> HttpResponse:
+    """Privacy Policy page."""
+    return render(request, 'core/privacy.html')
