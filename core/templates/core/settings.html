@@ -107,22 +107,22 @@
                     <div class="settings-group">
                         <label class="settings-label">Default mode</label>
                         <div class="settings-radio-group">
-                            {% for radio in prefs_form.default_mode %}
-                                <label class="settings-radio {% if radio.choice_value == current_prefs.default_mode %}selected{% endif %}">
-                                    {{ radio.tag }}
-                                    <span class="settings-radio-text">
-                                        {% if radio.choice_value == 'quick' %}
-                                            <span class="settings-radio-icon">⚡</span>
-                                            <span class="settings-radio-name">Quick Fix</span>
-                                            <span class="settings-radio-desc">Rule-based, instant, free</span>
-                                        {% else %}
-                                            <span class="settings-radio-icon">✦</span>
-                                            <span class="settings-radio-name">Deep Rewrite</span>
-                                            <span class="settings-radio-desc">AI-powered, 2-5 seconds</span>
-                                        {% endif %}
-                                    </span>
-                                </label>
-                            {% endfor %}
+                            <label class="settings-radio {% if current_prefs.default_mode == 'quick' %}selected{% endif %}">
+                                <input type="radio" name="default_mode" value="quick" {% if current_prefs.default_mode == 'quick' %}checked{% endif %}>
+                                <span class="settings-radio-text">
+                                    <span class="settings-radio-icon">⚡</span>
+                                    <span class="settings-radio-name">Quick Fix</span>
+                                    <span class="settings-radio-desc">Rule-based, instant, free</span>
+                                </span>
+                            </label>
+                            <label class="settings-radio {% if current_prefs.default_mode == 'deep' %}selected{% endif %}">
+                                <input type="radio" name="default_mode" value="deep" {% if current_prefs.default_mode == 'deep' %}checked{% endif %}>
+                                <span class="settings-radio-text">
+                                    <span class="settings-radio-icon">✦</span>
+                                    <span class="settings-radio-name">Deep Rewrite</span>
+                                    <span class="settings-radio-desc">AI-powered, 2-5 seconds</span>
+                                </span>
+                            </label>
                         </div>
                     </div>
 
@@ -146,5 +146,35 @@
 
     {% include 'core/feedback_widget.html' %}
     <script src="{% static 'core/main.js' %}"></script>
+
+    <script>
+        /* Fix radio button highlight — remove 'selected' class on change */
+        document.querySelectorAll('.settings-radio input[type="radio"]').forEach(function (radio) {
+            radio.addEventListener('change', function () {
+                /* Remove 'selected' from all siblings in the same group */
+                var group = this.closest('.settings-radio-group');
+                if (group) {
+                    group.querySelectorAll('.settings-radio').forEach(function (label) {
+                        label.classList.remove('selected');
+                    });
+                    /* Add 'selected' to the parent label of the checked radio */
+                    this.closest('.settings-radio').classList.add('selected');
+                }
+            });
+        });
+
+        /* Same fix for tone pills */
+        document.querySelectorAll('.settings-tone input[type="radio"]').forEach(function (radio) {
+            radio.addEventListener('change', function () {
+                var grid = this.closest('.settings-tone-grid');
+                if (grid) {
+                    grid.querySelectorAll('.settings-tone').forEach(function (label) {
+                        label.classList.remove('selected');
+                    });
+                    this.closest('.settings-tone').classList.add('selected');
+                }
+            });
+        });
+    </script>
 </body>
 </html>

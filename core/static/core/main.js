@@ -389,11 +389,15 @@ function drawSolarSystem() {
     requestAnimationFrame(drawSolarSystem);
 }
 
-/* Start */
-if (canvas && ctx) {
+/* Start — skip animation entirely on mobile for performance */
+if (canvas && ctx && window.innerWidth > 860) {
     resizeCanvas();
     drawSolarSystem();
-    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('resize', function () {
+        if (window.innerWidth > 860) {
+            resizeCanvas();
+        }
+    });
 }
 
 
