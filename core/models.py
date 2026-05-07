@@ -16,8 +16,13 @@ Models:
 2. Feedback — stores user-submitted feedback and suggestions
 """
 
+import random
+import string
+from datetime import timedelta
+
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 
 class UserPreferences(models.Model):
@@ -235,11 +240,6 @@ class RewriteLog(models.Model):
     def __str__(self):
         username = self.user.username if self.user else 'Anonymous'
         return f'{self.mode} by {username} ({self.created_at.strftime("%Y-%m-%d %H:%M")})'
-    
-import random
-import string
-from django.utils import timezone
-from datetime import timedelta
 
 
 class EmailVerification(models.Model):
