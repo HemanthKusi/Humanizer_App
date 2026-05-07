@@ -1543,6 +1543,21 @@ if (inputText && toggleDeep && btnRewrite) {
     /* Load history on page load */
     loadHistory();
 
+    /* Check if user navigated here from profile history */
+    (function () {
+        var pendingIndex = sessionStorage.getItem('rewright-load-history');
+        if (pendingIndex !== null) {
+            sessionStorage.removeItem('rewright-load-history');
+            var index = parseInt(pendingIndex, 10);
+            if (!isNaN(index)) {
+                /* Small delay to let the page finish rendering */
+                setTimeout(function () {
+                    loadHistoryItem(index);
+                }, 200);
+            }
+        }
+    })();
+
 
     /* ═══════════════════════════════════════════════════════════════════
     LOAD USER PREFERENCES

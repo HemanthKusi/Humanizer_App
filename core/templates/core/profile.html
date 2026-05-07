@@ -325,6 +325,35 @@
             </div>
             {% endif %}
 
+            <!-- ── Recent History (mobile only) ── -->
+            <div class="profile-card profile-history-mobile" id="profile-history-mobile">
+                <button class="profile-history-toggle" id="profile-history-toggle">
+                    <h2 class="profile-card-title" style="margin:0;">Recent history</h2>
+                    <span class="profile-history-arrow" id="profile-history-arrow">▾</span>
+                </button>
+                <div class="profile-history-body" id="profile-history-body">
+                    <div id="profile-history-list"></div>
+                    <button class="profile-history-clear-btn" id="profile-history-clear" style="display:none;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                            <path d="M10 11v6"/>
+                            <path d="M14 11v6"/>
+                        </svg>
+                        <span>Clear all</span>
+                    </button>
+                    <div class="profile-history-confirm" id="profile-history-confirm" style="display:none;">
+                        <span class="confirm-text">Clear all history?</span>
+                        <div class="confirm-buttons">
+                            <button class="confirm-yes" id="profile-confirm-yes">Yes</button>
+                            <button class="confirm-no" id="profile-confirm-no">No</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- ── Delete Account ── -->
             <div class="profile-card profile-card-danger">
                 <h2 class="profile-card-title">Delete account</h2>
@@ -394,5 +423,111 @@
             });
         })();
     </script>
+
+    <!-- Profile history for mobile — reads from same sessionStorage as homepage -->
+    <script>
+        (function () {
+            var container = document.getElementById('profile-history-mobile');
+            var listEl = document.getElementById('profile-history-list');
+            var clearBtn = document.getElementById('profile-history-clear');
+            var toggleBtn = document.getElementById('profile-history-toggle');
+            var confirmBox = document.getElementById('profile-history-confirm');
+            var confirmYes = document.getElementById('profile-confirm-yes');
+            var confirmNo = document.getElementById('profile-confirm-no');
+
+            if (!container || !listEl) return;
+
+            /* ── Toggle collapse/expand ── */
+            toggleBtn.addEventListener('click', function () {
+                container.classList.toggle('open');
+            });
+
+            /* ── Read history from sessionStorage ── */
+            var history = [];
+            try {
+                var stored = sessionStorage.getItem('rewright-history');
+                if (stored) history = JSON.parse(stored);
+            } catch (e) { }
+
+            if (!history || history.length === 0) {
+                listEl.innerHTML = '<div class="profile-history-empty">No recent rewrites. Use the homepage to start rewriting.</div>';
+                return;
+            }
+
+            /* Show clear button */
+            clearBtn.style.display = 'flex';
+
+            /* Helper: time ago */
+            function timeAgo(ts) {
+                var seconds = Math.floor((Date.now() - ts) / 1000);
+                if (seconds < 30) return 'just now';
+                if (seconds < 60) return seconds + 's ago';
+                var minutes = Math.floor(seconds / 60);
+                if (minutes < 60) return minutes + 'm ago';
+                var hours = Math.floor(minutes / 60);
+                if (hours < 24) return hours + 'h ago';
+                var days = Math.floor(hours / 24);
+                return days + 'd ago';
+            }
+
+            /* Helper: escape HTML */
+            function esc(text) {
+                var div = document.createElement('div');
+                div.appendChild(document.createTextNode(text));
+                return div.innerHTML;
+            }
+
+            /* ── Render history items ── */
+            var html = '<div class="profile-history-list">';
+            for (var i = 0; i < history.length; i++) {
+                var entry = history[i];
+                var preview = entry.output.substring(0, 120).replace(/\n/g, ' ');
+                var mode = entry.mode === 'Quick Fix' ? 'Quick Fix' : 'Deep Rewrite';
+                var tone = entry.tone && entry.tone !== 'default' ? ' · ' + entry.tone : '';
+                var ago = timeAgo(entry.timestamp);
+
+                html += '<a href="/" class="profile-history-item" data-index="' + i + '">';
+                html += '<div class="profile-history-preview">' + esc(preview) + '</div>';
+                html += '<div class="profile-history-bottom">';
+                html += '<span class="profile-history-mode">' + mode + tone + '</span>';
+                html += '<span class="profile-history-time">' + ago + '</span>';
+                html += '</div>';
+                html += '</a>';
+            }
+            html += '</div>';
+            listEl.innerHTML = html;
+
+            /* ── Click handler — store index and navigate to homepage ── */
+            listEl.querySelectorAll('.profile-history-item').forEach(function (item) {
+                item.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    var index = this.getAttribute('data-index');
+                    sessionStorage.setItem('rewright-load-history', index);
+                    window.location.href = '/';
+                });
+            });
+
+            /* ── Clear history with confirmation ── */
+            clearBtn.addEventListener('click', function () {
+                clearBtn.style.display = 'none';
+                confirmBox.style.display = 'flex';
+            });
+
+            /* Yes — clear everything */
+            confirmYes.addEventListener('click', function () {
+                sessionStorage.removeItem('rewright-history');
+                listEl.innerHTML = '<div class="profile-history-empty">No recent rewrites. Use the homepage to start rewriting.</div>';
+                confirmBox.style.display = 'none';
+                clearBtn.style.display = 'none';
+            });
+
+            /* No — cancel */
+            confirmNo.addEventListener('click', function () {
+                confirmBox.style.display = 'none';
+                clearBtn.style.display = 'flex';
+            });
+        })();
+    </script>
+    
 </body>
 </html>
