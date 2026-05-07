@@ -3,50 +3,60 @@ core/views.py
 -------------
 Views handle web requests and return responses.
 
-Two views:
-1. index()     — Serves the homepage (GET)
-2. humanize()  — API endpoint that processes text (POST)
+Page views:
+    index, signup, login, logout, profile, settings, analytics,
+    verify_email, forgot_password, terms, privacy
 
-The humanize view now supports two modes:
-    - deep_rewrite: false → Rule-based only (instant, free)
-    - deep_rewrite: true  → LLM rewrite (2-5 sec, costs ~$0.002)
+Admin views:
+    admin_users, admin_feedback, admin_analytics
 
-The toggle switch on the frontend controls which mode is used.
+API endpoints:
+    humanize (POST)  — rewrite text using rule-based and/or LLM engine
+    usage (GET)      — current rate limit usage for this IP
+    download (POST)  — generate downloadable file from rewritten text
+    feedback (POST)  — submit user feedback
 """
 
+import json
 import logging
 import time
-api_logger = logging.getLogger('api')
 
-
-import json
-
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
+from django.contrib.auth.models import User
+from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
+from django.db.models import Q, Count, Sum, Avg
 
-from core.humanizer_engine import humanize_rule_based
-from core.llm_engine import humanize_with_llm
-
-from core.sanitizer import sanitize_input
-
-from core.middleware import request_tracker
-
+from .humanizer_engine import humanize_rule_based
+from .llm_engine import humanize_with_llm
+from .sanitizer import sanitize_input
+from .middleware import request_tracker
 from .readability import flesch_reading_ease
-
 from .language import detect_language
-
 from .models import UserPreferences, Feedback, RewriteLog, EmailVerification, EmailChangeRequest, PasswordReset
- 
-from .email_utils import send_verification_email
+from .forms import (
+    SignUpForm, LoginForm, EditProfileForm, ChangePasswordForm,
+    PreferencesForm, FeedbackForm, OTPForm, ChangeEmailForm,
+    ForgotPasswordForm, ResetPasswordForm,
+)
+from .email_utils import (
+    send_verification_email, send_email_change_verification,
+    send_current_email_verification, send_password_reset_email,
+)
+from django.contrib.messages import get_messages
+
+from django.utils import timezone
+
+api_logger = logging.getLogger('api')
 
 def track_usage(request):
     """
     Record a successful request in the rate limiter's tracker.
     Only call this AFTER a successful response is ready.
     """
-    import time
-
     x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded:
         ip = x_forwarded.split(',')[0].strip()
@@ -441,6 +451,7 @@ def usage(request: HttpRequest) -> JsonResponse:
         'daily': {'used': daily_count, 'limit': 40},
     })
 
+@require_POST
 def download(request: HttpRequest) -> HttpResponse:
     """
     API endpoint: generates a downloadable file from the rewritten text.
@@ -450,10 +461,6 @@ def download(request: HttpRequest) -> HttpResponse:
 
     Returns the file as a download response.
     """
-    import json
-
-    if request.method != 'POST':
-        return JsonResponse({'error': 'POST required'}, status=405)
 
     try:
         body = json.loads(request.body.decode('utf-8'))
@@ -470,7 +477,7 @@ def download(request: HttpRequest) -> HttpResponse:
 
         elif file_format == 'docx':
             from docx import Document
-            from docx.shared import Pt, Inches
+            from docx.shared import Pt
             from io import BytesIO
 
             doc = Document()
@@ -535,20 +542,12 @@ def download(request: HttpRequest) -> HttpResponse:
             return JsonResponse({'error': 'Invalid format. Use txt, docx, or pdf.'}, status=400)
 
     except Exception as e:
-        import logging
-        logging.getLogger('api').error(f'Download failed: {str(e)}')
+        api_logger.error(f'Download failed: {str(e)}')
         return JsonResponse({'error': 'Download failed. Please try again.'}, status=500)
     
 # ═══════════════════════════════════════════════════════════════════
 # AUTHENTICATION VIEWS
 # ═══════════════════════════════════════════════════════════════════
-
-from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
-from django.contrib.auth.models import User
-from django.shortcuts import redirect
-from django.contrib.auth.decorators import login_required
-from .forms import SignUpForm, LoginForm, EditProfileForm, ChangePasswordForm, PreferencesForm, FeedbackForm, OTPForm, ChangeEmailForm, ForgotPasswordForm, ResetPasswordForm
-from .email_utils import send_verification_email, send_email_change_verification, send_current_email_verification, send_password_reset_email
 
 
 def signup_view(request: HttpRequest) -> HttpResponse:
@@ -593,7 +592,6 @@ def signup_view(request: HttpRequest) -> HttpResponse:
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
 
             # Record terms acceptance
-            from django.utils import timezone
             prefs, _ = UserPreferences.objects.get_or_create(user=user)
             prefs.terms_accepted_at = timezone.now()
             prefs.save()
@@ -730,7 +728,6 @@ def login_view(request: HttpRequest) -> HttpResponse:
     password_reset_success = request.session.pop('password_reset_success', False)
 
     # Pick up restriction messages from allauth redirect
-    from django.contrib.messages import get_messages
     restriction_msg = None
     for msg in get_messages(request):
         if 'restricted' in str(msg).lower():
@@ -1210,7 +1207,6 @@ def profile_view(request: HttpRequest) -> HttpResponse:
         'terms_accepted_at': terms_accepted_at,
     })
 
-from django.contrib.admin.views.decorators import staff_member_required
 
 
 @staff_member_required(login_url='/login/')
@@ -1283,7 +1279,6 @@ def admin_users_view(request: HttpRequest) -> HttpResponse:
 
     # Apply search filter
     if search:
-        from django.db.models import Q
         users = users.filter(
             Q(username__icontains=search) |
             Q(email__icontains=search) |
@@ -1316,18 +1311,6 @@ def admin_users_view(request: HttpRequest) -> HttpResponse:
         'staff_users': staff_users,
         'unread_feedback': unread_feedback,
     })
-
-def inactive_redirect_view(request: HttpRequest) -> HttpResponse:
-    """
-    Catch allauth's inactive account redirect and send back to login
-    with a restriction warning message.
-    """
-    from django.contrib import messages
-    messages.error(
-        request,
-        'Your account has been restricted. Please contact an admin if you believe this is a mistake.'
-    )
-    return redirect('login')
 
 
 @login_required
@@ -1441,8 +1424,6 @@ def analytics_view(request: HttpRequest) -> HttpResponse:
     Returns:
         Rendered analytics.html with stats
     """
-    from django.db.models import Sum, Count, Avg
-    from django.utils import timezone
     import datetime
 
     user = request.user
@@ -1493,8 +1474,7 @@ def analytics_view(request: HttpRequest) -> HttpResponse:
     # ── Row 3: Activity ──
     # Use the timezone already activated by TimezoneMiddleware
     import zoneinfo
-    from django.utils import timezone as dj_timezone
-    user_tz = dj_timezone.get_current_timezone()
+    user_tz = timezone.get_current_timezone()
 
     now_utc = timezone.now()
     now_local = now_utc.astimezone(user_tz)
@@ -1639,13 +1619,11 @@ def admin_analytics_view(request: HttpRequest) -> HttpResponse:
         Rendered admin_analytics.html with platform stats
     """
     from django.db.models import Sum, Count, Avg
-    from django.utils import timezone
     import datetime
     import zoneinfo
 
     # Use the timezone already activated by TimezoneMiddleware
-    from django.utils import timezone as dj_timezone
-    user_tz = dj_timezone.get_current_timezone()
+    user_tz = timezone.get_current_timezone()
 
     now_utc = timezone.now()
     now_local = now_utc.astimezone(user_tz)
