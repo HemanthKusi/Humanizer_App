@@ -1,17 +1,22 @@
 """
 core/middleware.py
 -----------------
-Custom middleware for security.
+Custom middleware for security and timezone handling.
 
 Contains:
     - SimpleRateLimiter: limits requests per IP to prevent abuse
-    - Tracks request counts in memory (good for single-server deployment)
+    - TimezoneMiddleware: activates user's local timezone per request
+
+Rate limiter tracks request counts in memory (good for single-server deployment).
 """
 
+import os
 import time
-from django.http import JsonResponse
-
 import logging
+import zoneinfo
+
+from django.http import JsonResponse
+from django.utils import timezone as dj_timezone
 
 security_logger = logging.getLogger('security')
 
@@ -31,9 +36,10 @@ class SimpleRateLimiter:
         - Only applies to POST requests to /api/ endpoints
 
     Configuration:
-        MAX_REQUESTS: maximum requests allowed per window
-        WINDOW_SECONDS: time window in seconds
-        BURST_LIMIT: max requests in a short burst (5 seconds)
+        BURST_LIMIT / BURST_WINDOW: max requests in a short burst (5 seconds)
+        MINUTE_LIMIT / MINUTE_WINDOW: max requests per minute
+        HOURLY_LIMIT / HOURLY_WINDOW: max requests per hour
+        DAILY_LIMIT / DAILY_WINDOW: max requests per day
 
     Why in-memory?
         For a single-server app this is fine and fast.
@@ -81,7 +87,6 @@ class SimpleRateLimiter:
             ]
 
             # Skip rate limiting in development but track usage
-            import os
             if os.getenv('DEBUG', 'False').lower() == 'true':
                 return self.get_response(request)
 
@@ -155,16 +160,18 @@ class SimpleRateLimiter:
         return request.META.get('REMOTE_ADDR', '0.0.0.0')
 
     def _cleanup(self, now):
-        """Remove IPs that haven't made requests recently."""
+        """
+        Remove IPs that haven't made requests recently.
+
+        Purges any IP whose most recent request is older than
+        the daily window. Prevents memory from growing forever.
+        """
         stale_ips = [
             ip for ip, timestamps in self.requests.items()
-            if not timestamps or now - max(timestamps) > self.WINDOW_SECONDS * 2
+            if not timestamps or now - max(timestamps) > self.DAILY_WINDOW
         ]
         for ip in stale_ips:
             del self.requests[ip]
-
-import zoneinfo
-from django.utils import timezone as dj_timezone
 
 
 class TimezoneMiddleware:
