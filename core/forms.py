@@ -20,10 +20,14 @@ Django forms work like this:
     5. If invalid, form.errors contains what went wrong
 """
 
+import re
+
 from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+
+from .models import UserPreferences, Feedback
 
 
 class SignUpForm(forms.Form):
@@ -100,7 +104,6 @@ class SignUpForm(forms.Form):
         username = self.cleaned_data['username'].strip().lower()
 
         # Check for invalid characters
-        import re
         if not re.match(r'^[a-zA-Z0-9_]+$', username):
             raise ValidationError(
                 'Username can only contain letters, numbers, and underscores.'
@@ -200,9 +203,8 @@ class EditProfileForm(forms.Form):
     """
     Form for editing basic profile information.
 
-    Currently only supports changing the display name.
-    Email changes are excluded for now because they'd need
-    email verification to prevent abuse.
+    Supports changing the display name. Email changes are handled
+    separately via two-step OTP verification on the profile page.
 
     Fields:
         - first_name: optional display name (what others see)
@@ -287,9 +289,6 @@ class ChangePasswordForm(forms.Form):
             self.add_error('confirm_new_password', 'New passwords do not match.')
 
         return cleaned_data
-    
-
-from .models import UserPreferences, Feedback
 
 
 class PreferencesForm(forms.Form):
@@ -467,7 +466,6 @@ class ResetPasswordForm(forms.Form):
 
         # Run Django's built-in password validators
         if pw:
-            from django.contrib.auth.password_validation import validate_password
             try:
                 validate_password(pw)
             except forms.ValidationError as e:
