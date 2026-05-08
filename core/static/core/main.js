@@ -461,44 +461,10 @@ if (inputText && toggleDeep && btnRewrite) {
     Only applies to guest users (not logged in).
     ═══════════════════════════════════════════════════════════════════ */
 
-    const GUEST_LIMIT = 3;
     const isGuest = !document.querySelector('.nav-logout');
     const guestModal = document.getElementById('guest-modal');
     const guestDismiss = document.getElementById('guest-modal-dismiss');
 
-    /**
-     * Get the number of rewrites this guest has used.
-     * Returns 0 if not a guest or no history.
-     */
-    function getGuestUsage() {
-        if (!isGuest) return 0;
-        try {
-            return parseInt(localStorage.getItem('rewright-guest-usage') || '0', 10);
-        } catch (e) {
-            return 0;
-        }
-    }
-
-    /**
-     * Increment guest usage count by 1.
-     */
-    function incrementGuestUsage() {
-        if (!isGuest) return;
-        try {
-            const current = getGuestUsage();
-            localStorage.setItem('rewright-guest-usage', String(current + 1));
-        } catch (e) { }
-        updateGuestRemaining();
-    }
-
-    /**
-     * Check if guest has reached the limit.
-     * Returns true if they should be blocked.
-     */
-    function isGuestBlocked() {
-        if (!isGuest) return false;
-        return getGuestUsage() >= GUEST_LIMIT;
-    }
 
     /**
      * Show the guest limit modal.
@@ -510,31 +476,37 @@ if (inputText && toggleDeep && btnRewrite) {
     }
 
     /**
-     * Update the remaining count display below the rewrite button.
+     * Fetch guest remaining count from server and display it.
+     * Server tracks by IP so it can't be bypassed.
      */
-    function updateGuestRemaining() {
+    async function updateGuestRemaining() {
         if (!isGuest) return;
 
-        let badge = document.getElementById('guest-remaining');
-        const used = getGuestUsage();
-        const remaining = Math.max(0, GUEST_LIMIT - used);
+        try {
+            const response = await fetch('/api/guest-usage/');
+            const data = await response.json();
+            const remaining = Math.max(0, data.limit - data.used);
 
-        if (!badge) {
-            badge = document.createElement('div');
-            badge.className = 'guest-remaining';
-            badge.id = 'guest-remaining';
-            const actionBar = document.querySelector('.action-bar');
-            if (actionBar) {
-                actionBar.parentElement.insertBefore(badge, actionBar.nextSibling);
+            let badge = document.getElementById('guest-remaining');
+            if (!badge) {
+                badge = document.createElement('div');
+                badge.className = 'guest-remaining';
+                badge.id = 'guest-remaining';
+                const actionBar = document.querySelector('.action-bar');
+                if (actionBar) {
+                    actionBar.parentElement.insertBefore(badge, actionBar.nextSibling);
+                }
             }
-        }
 
-        if (remaining === 0) {
-        badge.textContent = 'No free rewrites remaining — create an account to continue';
-        badge.style.color = '#dc2626';
-        badge.style.fontWeight = '600';
-        } else {
-            badge.textContent = `${remaining} free rewrite${remaining === 1 ? '' : 's'} remaining`;
+            if (remaining === 0) {
+                badge.textContent = 'No free rewrites remaining — create an account to continue';
+                badge.style.color = '#dc2626';
+                badge.style.fontWeight = '600';
+            } else {
+                badge.textContent = `${remaining} free rewrite${remaining === 1 ? '' : 's'} remaining`;
+            }
+        } catch (e) {
+            /* Silently fail — not critical */
         }
     }
 
@@ -799,11 +771,6 @@ if (inputText && toggleDeep && btnRewrite) {
     const text = inputText.value.trim();
     if (!text) return;
 
-    /* Check guest limit BEFORE making the API call */
-    if (isGuestBlocked()) {
-        showGuestModal();
-        return;
-    }
 
     /* Prevent rapid clicking */
     const now = Date.now();
@@ -817,7 +784,7 @@ if (inputText && toggleDeep && btnRewrite) {
 
         try {
             const result = await callAPI(text);
-            showResult(result);
+            if (result) showResult(result);
         } catch (error) {
             console.error('Rewrite failed:', error);
             showError(
@@ -896,6 +863,22 @@ if (inputText && toggleDeep && btnRewrite) {
 
         const data = await response.json();
         if (!response.ok) {
+            /* Server-side guest limit — show signup modal */
+            if (data.error === 'guest_limit_reached') {
+                showGuestModal();
+                /* Reset button state */
+                btnRewrite.disabled = false;
+                document.querySelector('.btn-text').textContent = toggleDeep.checked ? 'Deep Rewrite' : 'Quick Fix';
+                outputArea.innerHTML = `
+                    <div class="output-placeholder">
+                        <div class="placeholder-orb">
+                            <span></span><span></span><span></span>
+                        </div>
+                        <p>Your improved text<br>will appear here</p>
+                    </div>
+                `;
+                return null;
+            }
             const err = new Error(data.error || 'Something went wrong');
             err.flaggedWords = data.flagged_words || null;
             err.field = data.field || null;
@@ -987,13 +970,12 @@ if (inputText && toggleDeep && btnRewrite) {
         btnRetry.style.display = toggleDeep.checked ? 'flex' : 'none';
         downloadWrapper.style.display = 'flex';
 
-        /* Refresh usage counter — only for logged-in users */
+        /* Refresh usage counter */
         if (!isGuest) {
             updateUsage();
+        } else {
+            updateGuestRemaining();
         }
-
-        /* Track guest usage */
-        incrementGuestUsage();
 
         /* Save to session history */
         saveToHistory(
@@ -1196,7 +1178,7 @@ if (inputText && toggleDeep && btnRewrite) {
 
         try {
             const result = await callAPI(lastRequestText);
-            showResult(result);
+            if (result) showResult(result);
         } catch (error) {
             console.error('Re-roll failed:', error);
             showError(

@@ -224,6 +224,12 @@ class RewriteLog(models.Model):
         help_text='Character count of the original text',
     )
 
+    ip_address = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        help_text='Client IP address (for guest rate limiting)',
+    )
+
     created_at = models.DateTimeField(
         auto_now_add=True,
         help_text='When this rewrite happened',

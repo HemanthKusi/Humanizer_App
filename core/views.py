@@ -52,6 +52,28 @@ from django.utils import timezone
 
 api_logger = logging.getLogger('api')
 
+# ─── Constants ──────────────────────────────────────────────
+GUEST_DAILY_LIMIT = 3  # Free rewrites per day for non-logged-in users
+
+
+def get_client_ip(request):
+    """
+    Extract the real client IP address from the request.
+
+    Checks X-Forwarded-For header first (set by proxies/load balancers
+    like Railway/Render), falls back to REMOTE_ADDR.
+
+    Args:
+        request: The Django HttpRequest object
+
+    Returns:
+        IP address string
+    """
+    x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded:
+        return x_forwarded.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR', '0.0.0.0')
+
 def track_usage(request):
     """
     Record a successful request in the rate limiter's tracker.
@@ -221,16 +243,24 @@ def humanize(request: HttpRequest) -> JsonResponse:
             except EmailVerification.DoesNotExist:
                 pass
 
-        # ── Guest usage limit (backend safety net) ──
-        # Frontend tracks usage with localStorage but that can be bypassed.
-        # Backend checks session-based counter as a backup.
+        # ── Guest usage limit (IP-based) ──
+        # Tracks by IP address server-side. Cannot be bypassed by
+        # clearing cache, switching browsers, or using incognito.
         if not request.user.is_authenticated:
-            guest_usage = request.session.get('guest_rewrites', 0)
-            if guest_usage >= 3:
+            client_ip = get_client_ip(request)
+            today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+            guest_usage_today = RewriteLog.objects.filter(
+                ip_address=client_ip,
+                user__isnull=True,
+                created_at__gte=today_start,
+            ).count()
+
+            if guest_usage_today >= GUEST_DAILY_LIMIT:
                 return JsonResponse({
-                    'error': 'You have used your 3 free rewrites. Please create an account to continue.',
-                    'guest_limit_reached': True,
-                }, status=403)
+                    'error': 'guest_limit_reached',
+                    'message': f'Free limit reached ({GUEST_DAILY_LIMIT} per day). Sign up for unlimited rewrites.',
+                }, status=429)
 
         # ── Detect input language ──
         language = detect_language(text)
@@ -266,10 +296,6 @@ def humanize(request: HttpRequest) -> JsonResponse:
             duration = round(time.time() - request_start, 2)
             track_usage(request)
 
-            # Increment guest session counter
-            if not request.user.is_authenticated:
-                request.session['guest_rewrites'] = request.session.get('guest_rewrites', 0) + 1
-
             # Calculate readability before and after
             original_readability = flesch_reading_ease(text)
             final_readability = flesch_reading_ease(rule_result['text'])
@@ -284,6 +310,7 @@ def humanize(request: HttpRequest) -> JsonResponse:
                 input_words=len(text.split()),
                 output_words=len(rule_result['text'].split()),
                 input_chars=len(text),
+                ip_address=get_client_ip(request) if not request.user.is_authenticated else None,
             )
 
             log_user = f'{request.user.username} (id={request.user.id})' if request.user.is_authenticated else 'Guest'
@@ -368,6 +395,7 @@ def humanize(request: HttpRequest) -> JsonResponse:
             input_words=len(text.split()),
             output_words=len(llm_result['text'].split()),
             input_chars=len(text),
+            ip_address=get_client_ip(request) if not request.user.is_authenticated else None,
         )
 
         log_user = f'{request.user.username} (id={request.user.id})' if request.user.is_authenticated else 'Guest'
@@ -412,6 +440,33 @@ def humanize(request: HttpRequest) -> JsonResponse:
             {'error': 'Something went wrong. Please try again.'},
             status=500
         )
+
+def guest_usage(request: HttpRequest) -> JsonResponse:
+    """
+    API endpoint: returns how many rewrites a guest IP has used today.
+
+    Used by the frontend to show "X free rewrites remaining" for
+    non-logged-in users. Tracks by IP address server-side.
+
+    Returns:
+        { used: int, limit: int }
+    """
+    if request.user.is_authenticated:
+        return JsonResponse({'used': 0, 'limit': 0})
+
+    client_ip = get_client_ip(request)
+    today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    used = RewriteLog.objects.filter(
+        ip_address=client_ip,
+        user__isnull=True,
+        created_at__gte=today_start,
+    ).count()
+
+    return JsonResponse({
+        'used': used,
+        'limit': GUEST_DAILY_LIMIT,
+    })
     
 def usage(request: HttpRequest) -> JsonResponse:
     """
