@@ -16,6 +16,8 @@ os.environ['SSL_CERT_FILE'] = certifi.where()
 from pathlib import Path
 from dotenv import load_dotenv
 
+import dj_database_url
+
 # Load environment variables from our .env file
 # This must happen before we try to read any env variables
 load_dotenv()
@@ -108,6 +110,7 @@ SESSION_COOKIE_HTTPONLY = True
 MIDDLEWARE = [
     'core.middleware.SimpleRateLimiter',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',  # CSRF protection (important for forms)
@@ -162,15 +165,21 @@ WSGI_APPLICATION = 'humanizer.wsgi.application'
 
 # ─── DATABASE ─────────────────────────────────────────────────────────────────
 
-# SQLite is a simple file-based database.
-# Perfect for development. No setup required.
-# The database is stored as a single file: db.sqlite3
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# Use PostgreSQL in production (DATABASE_URL from Railway)
+# Fall back to SQLite in development
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.config(default=DATABASE_URL, conn_max_age=600)
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # ─── PASSWORD VALIDATION ─────────────────────────────────────────────────────
@@ -206,6 +215,11 @@ STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
     'django.contrib.staticfiles.finders.FileSystemFinder',
 ]
+
+# WhiteNoise compression and caching for production
+# Serves static files with far-future cache headers and gzip compression
+if not DEBUG:
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key type for database models
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

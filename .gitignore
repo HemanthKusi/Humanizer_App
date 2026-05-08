@@ -27,3 +27,7 @@ build/
 
 # log files
 logs/
+
+# Static files (CSS, JavaScript, images)
+# Whitenoise will serve these in production
+staticfiles/
