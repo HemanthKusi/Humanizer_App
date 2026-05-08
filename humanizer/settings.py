@@ -7,13 +7,13 @@ It controls the database, installed apps, templates, security, and more.
 """
 
 # SSL certificate configuration
+import os
 import ssl
 import certifi
-import os
+
 os.environ['SSL_CERT_FILE'] = certifi.where()
 
 from pathlib import Path
-import os
 from dotenv import load_dotenv
 
 # Load environment variables from our .env file
@@ -358,7 +358,8 @@ ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = True
 ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
 
-# Don't send email verification (we can add this later)
+# Disable allauth's built-in email verification — we use our own
+# OTP-based system (see core/email_utils.py and verify_email view)
 ACCOUNT_EMAIL_VERIFICATION = 'none'
 
 # Google provider settings — reads from .env
