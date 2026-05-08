@@ -25,18 +25,25 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+# Debug mode shows detailed error pages.
+# Must be False in production. We read it from .env.
+# The string 'True' in .env becomes the boolean True here.
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+
+
 # ─── SECURITY ────────────────────────────────────────────────────────────────
 
 # Secret key is used for cryptographic signing in Django.
 # We read it from .env so it is never hardcoded in code.
 # os.environ.get() reads a value from environment variables.
 # The second argument is a fallback (only used in development if .env is missing)
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'fallback-dev-key-change-in-production')
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'dev-only-insecure-key-do-not-use-in-production'
+    else:
+        raise ValueError('DJANGO_SECRET_KEY must be set in production. Add it to your .env file.')
 
-# Debug mode shows detailed error pages.
-# Must be False in production. We read it from .env.
-# The string 'True' in .env becomes the boolean True here.
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 # Which hostnames are allowed to serve this app.
 # In development, localhost is fine.
@@ -113,6 +120,9 @@ MIDDLEWARE = [
 
 # CSRF settings
 CSRF_COOKIE_SAMESITE = 'Strict'
+# Trusted origins for CSRF — required when serving behind HTTPS
+# Reads from .env so we can set it per environment
+CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:8003,http://127.0.0.1:8003').split(',')
 CSRF_COOKIE_HTTPONLY = False    # JS needs to read it
 
 # Limit request body size to 100KB (more than enough for 500 words)
@@ -184,6 +194,9 @@ USE_TZ = True
 
 # Leading slash is required in Django 6.0
 STATIC_URL = '/static/'
+# Where collectstatic gathers all static files for production serving
+# Only used in production — in development, Django serves static files directly
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Explicitly tell Django which finders to use.
 # AppDirectoriesFinder looks inside each app's static/ folder.
