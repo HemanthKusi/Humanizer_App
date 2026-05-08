@@ -9,11 +9,13 @@ charset-normalizer==3.4.7
 cryptography==47.0.0
 defusedxml==0.7.1
 distro==1.9.0
+dj-database-url==3.1.2
 Django==6.0.4
 django-allauth==65.16.1
 docstring_parser==0.18.0
 fonttools==4.62.1
 fpdf2==2.8.7
+gunicorn==26.0.0
 h11==0.16.0
 httpcore==1.0.9
 httpx==0.28.1
@@ -22,7 +24,9 @@ jiter==0.14.0
 langdetect==1.0.9
 lxml==6.1.0
 openai==2.31.0
+packaging==26.2
 pillow==12.2.0
+psycopg2-binary==2.9.12
 pycparser==3.0
 pydantic==2.13.0
 pydantic_core==2.46.0
@@ -37,3 +41,4 @@ tqdm==4.67.3
 typing-inspection==0.4.2
 typing_extensions==4.15.0
 urllib3==2.6.3
+whitenoise==6.12.0
