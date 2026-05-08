@@ -49,7 +49,6 @@
         3. Specular highlight (small bright spot)
         4. Shadow terminator (dark edge on the far side from sun)
 
-    Replace everything from the top of main.js to the DOM REFERENCES section.
 */
 
 const canvas = document.getElementById('solar-system');
