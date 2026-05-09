@@ -7,8 +7,7 @@ Uses Django's HTML email support to send professional-looking
 emails with the Rewright branding.
 """
 
-from django.core.mail import EmailMultiAlternatives
-from django.conf import settings
+from .email_service import send_email
 import logging
 
 api_logger = logging.getLogger('api')
@@ -144,27 +143,20 @@ def send_verification_email(user, code):
 
     html_body = _build_otp_email_html(user.username, code, purpose='verify')
 
-    try:
-        msg = EmailMultiAlternatives(
-            subject=subject,
-            body=text_body,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[user.email],
-        )
-        msg.attach_alternative(html_body, 'text/html')
-        msg.send(fail_silently=False)
+    result = send_email(user.email, subject, html_body, text_body)
 
+    if result:
         api_logger.info(
             f'VERIFICATION EMAIL SENT | user={user.username} (id={user.id}) | '
             f'email={user.email}'
         )
-        return True
-    except Exception as e:
+    else:
         api_logger.error(
             f'VERIFICATION EMAIL FAILED | user={user.username} (id={user.id}) | '
-            f'email={user.email} | error={str(e)}'
+            f'email={user.email}'
         )
-        return False
+
+    return result
 
 
 def send_email_change_verification(user, new_email, code):
@@ -193,27 +185,20 @@ def send_email_change_verification(user, new_email, code):
 
     html_body = _build_otp_email_html(user.username, code, purpose='email_change')
 
-    try:
-        msg = EmailMultiAlternatives(
-            subject=subject,
-            body=text_body,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[new_email],
-        )
-        msg.attach_alternative(html_body, 'text/html')
-        msg.send(fail_silently=False)
+    result = send_email(new_email, subject, html_body, text_body)
 
+    if result:
         api_logger.info(
             f'EMAIL CHANGE VERIFICATION SENT | user={user.username} (id={user.id}) | '
             f'new_email={new_email}'
         )
-        return True
-    except Exception as e:
+    else:
         api_logger.error(
             f'EMAIL CHANGE VERIFICATION FAILED | user={user.username} (id={user.id}) | '
-            f'new_email={new_email} | error={str(e)}'
+            f'new_email={new_email}'
         )
-        return False
+
+    return result
     
 def send_current_email_verification(user, code):
     """
@@ -241,27 +226,20 @@ def send_current_email_verification(user, code):
 
     html_body = _build_otp_email_html(user.username, code, purpose='identity')
 
-    try:
-        msg = EmailMultiAlternatives(
-            subject=subject,
-            body=text_body,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[user.email],
-        )
-        msg.attach_alternative(html_body, 'text/html')
-        msg.send(fail_silently=False)
+    result = send_email(user.email, subject, html_body, text_body)
 
+    if result:
         api_logger.info(
             f'IDENTITY VERIFICATION SENT | user={user.username} (id={user.id}) | '
             f'email={user.email}'
         )
-        return True
-    except Exception as e:
+    else:
         api_logger.error(
             f'IDENTITY VERIFICATION FAILED | user={user.username} (id={user.id}) | '
-            f'email={user.email} | error={str(e)}'
+            f'email={user.email}'
         )
-        return False
+
+    return result
     
 def send_password_reset_email(email, code):
     """
@@ -293,22 +271,11 @@ def send_password_reset_email(email, code):
 
     html_body = _build_otp_email_html(name, code, purpose='password')
 
-    try:
-        msg = EmailMultiAlternatives(
-            subject=subject,
-            body=text_body,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[email],
-        )
-        msg.attach_alternative(html_body, 'text/html')
-        msg.send(fail_silently=False)
+    result = send_email(email, subject, html_body, text_body)
 
-        api_logger.info(
-            f'PASSWORD RESET EMAIL SENT | email={email}'
-        )
-        return True
-    except Exception as e:
-        api_logger.error(
-            f'PASSWORD RESET EMAIL FAILED | email={email} | error={str(e)}'
-        )
-        return False
+    if result:
+        api_logger.info(f'PASSWORD RESET EMAIL SENT | email={email}')
+    else:
+        api_logger.error(f'PASSWORD RESET EMAIL FAILED | email={email}')
+
+    return result
