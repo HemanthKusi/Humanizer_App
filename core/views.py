@@ -248,7 +248,11 @@ def humanize(request: HttpRequest) -> JsonResponse:
         # clearing cache, switching browsers, or using incognito.
         if not request.user.is_authenticated:
             client_ip = get_client_ip(request)
-            today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            # Use the user's local timezone (from cookie) for midnight calculation
+            # so the daily limit resets at their local midnight, not UTC midnight
+            user_tz = timezone.get_current_timezone()
+            local_now = timezone.now().astimezone(user_tz)
+            today_start = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
 
             guest_usage_today = RewriteLog.objects.filter(
                 ip_address=client_ip,
@@ -455,7 +459,9 @@ def guest_usage(request: HttpRequest) -> JsonResponse:
         return JsonResponse({'used': 0, 'limit': 0})
 
     client_ip = get_client_ip(request)
-    today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    user_tz = timezone.get_current_timezone()
+    local_now = timezone.now().astimezone(user_tz)
+    today_start = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
 
     used = RewriteLog.objects.filter(
         ip_address=client_ip,
