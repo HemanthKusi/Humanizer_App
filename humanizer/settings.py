@@ -79,8 +79,10 @@ INSTALLED_APPS = [
 # ─── SECURITY HEADERS ───────────────────────────────────────────
 # These tell browsers to enforce security policies
 
-# Only send HTTPS in production
-SECURE_SSL_REDIRECT = not DEBUG
+# Railway handles HTTPS at the proxy level, so Django doesn't need to redirect.
+# Only enable SSL redirect if NOT behind a proxy (i.e., running standalone).
+SECURE_SSL_REDIRECT = False
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Prevent clickjacking — no one can embed your site in an iframe
 X_FRAME_OPTIONS = 'DENY'
