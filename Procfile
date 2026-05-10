@@ -1,1 +1,1 @@
-web: python manage.py migrate && python manage.py set_site_domain rewright.app && python manage.py collectstatic --noinput && gunicorn humanizer.wsgi --bind 0.0.0.0:$PORT --timeout 120
+web: python manage.py migrate && python manage.py set_site_domain rewright.app && python manage.py create_superuser_if_none && python manage.py collectstatic --noinput && gunicorn humanizer.wsgi --bind 0.0.0.0:$PORT --timeout 120
