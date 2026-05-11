@@ -58,7 +58,7 @@ def _build_otp_email_html(username, code, purpose='verify'):
                         <!-- Logo bar -->
                         <tr>
                             <td style="background-color:#1a1a2e; padding: 20px 30px; text-align:center;">
-                                <img src="https://rewright.app/static/core/logo-email.png" alt="Rewright" width="28" height="28" style="display:inline-block; vertical-align:middle; margin-right:8px; border:0;" />
+                                <img src="https://rewright.app/static/core/logo-email.png" alt="Rewright" width="32" height="32" style="display:inline-block; vertical-align:middle; margin-right:8px; border:0;" />
                                 <span style="font-size:22px; font-weight:700; color:#e8a24e; letter-spacing:0.5px; vertical-align:middle;">
                                     Rewright
                                 </span>
