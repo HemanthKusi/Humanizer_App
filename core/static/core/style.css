@@ -105,6 +105,10 @@ body.premium {
     background: var(--bg);
 }
 
+body.premium main {
+    padding-bottom: 2.78rem;
+}
+
 
 /* ═══════════════════════════════════════════════════════════════════
    BACKGROUNDS
@@ -5655,4 +5659,39 @@ body.premium .profile-history-clear-btn svg {
 body.premium .profile-history-confirm {
     background: rgba(248, 113, 113, 0.06);
     border-color: rgba(248, 113, 113, 0.15);
+}
+
+
+/* ─── SITE FOOTER ─────────────────────────────────────────── */
+
+.site-footer {
+    text-align: center;
+    padding: 20px 0 24px;
+    font-size: 13px;
+    color: var(--text-secondary, rgba(100, 100, 100, 0.6));
+    position: relative;
+    z-index: 1;
+}
+
+.site-footer a {
+    color: var(--text-secondary, rgba(100, 100, 100, 0.6));
+    text-decoration: none;
+    margin: 0 8px;
+    transition: color 0.2s;
+}
+
+.site-footer a:hover {
+    color: var(--accent);
+}
+
+.footer-dot {
+    margin: 0 4px;
+}
+
+body.premium .site-footer {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+body.premium .site-footer a {
+    color: rgba(255, 255, 255, 0.4);
 }
