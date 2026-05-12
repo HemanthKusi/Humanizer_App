@@ -577,6 +577,11 @@ def download(request: HttpRequest) -> HttpResponse:
             pdf = FPDF()
             pdf.add_page()
             pdf.set_auto_page_break(auto=True, margin=25)
+            # Replace curly quotes and special chars with ASCII equivalents
+            text = text.replace('\u2018', "'").replace('\u2019', "'")
+            text = text.replace('\u201c', '"').replace('\u201d', '"')
+            text = text.replace('\u2013', '-').replace('\u2014', '-')
+            text = text.replace('\u2026', '...')
             pdf.set_font('Helvetica', size=11)
 
             # Add text line by line
