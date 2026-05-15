@@ -16,6 +16,8 @@ os.environ['SSL_CERT_FILE'] = certifi.where()
 from pathlib import Path
 from dotenv import load_dotenv
 
+import io
+
 import dj_database_url
 
 # Load environment variables from our .env file
@@ -166,23 +168,40 @@ WSGI_APPLICATION = 'humanizer.wsgi.application'
 
 
 # ─── DATABASE ─────────────────────────────────────────────────────────────────
+#
+# Supports three environments:
+# 1. Google Cloud Run — connects to Cloud SQL via Unix socket
+# 2. Railway — connects via DATABASE_URL
+# 3. Local development — uses SQLite
 
-# Use PostgreSQL in production (DATABASE_URL from Railway)
-# Fall back to SQLite in development
 DATABASE_URL = os.environ.get('DATABASE_URL')
+CLOUD_SQL_CONNECTION = os.environ.get('CLOUD_SQL_CONNECTION_NAME')
 
-if DATABASE_URL:
+if CLOUD_SQL_CONNECTION:
+    # Google Cloud Run — connect to Cloud SQL via Unix socket
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('DB_NAME', 'rewright'),
+            'USER': os.environ.get('DB_USER', 'rewright_user'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+            'HOST': f'/cloudsql/{CLOUD_SQL_CONNECTION}',
+            'PORT': '5432',
+        }
+    }
+elif DATABASE_URL:
+    # Railway — parse DATABASE_URL
     DATABASES = {
         'default': dj_database_url.config(default=DATABASE_URL, conn_max_age=600)
     }
 else:
+    # Local development — SQLite
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
-
 
 # ─── PASSWORD VALIDATION ─────────────────────────────────────────────────────
 
